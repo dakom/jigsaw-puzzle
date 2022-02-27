@@ -21,3 +21,4 @@ Still more to do:
 * Detect and lock-in correct placement
 * Animation
 * Instancing (get it down to one draw call)
+* Generate the spritesheet from raster pieces (less artifacts, more control)
