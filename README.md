@@ -1,4 +1,4 @@
-# [Play Now](https://dakom.github.io/jigsaw-puzzle)
+# [Play Now](https://dakom-jigsaw-puzzle.netlify.app/)
 
 # What is it?
 
