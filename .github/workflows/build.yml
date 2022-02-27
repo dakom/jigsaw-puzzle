@@ -1,0 +1,41 @@
+name: Test, Build, and Deploy 
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v1
+
+    - name: install node
+      uses: actions/setup-node@v1
+
+    - name: install npm deps
+      run: npm ci
+      working-directory: ./frontend
+
+    - name: install rust nightly
+      run: rustup toolchain install nightly
+
+    - name: make nightly the default
+      run: rustup default nightly
+
+    - name: add rust target
+      run: rustup target add wasm32-unknown-unknown
+
+    - name: build for release 
+      run: npm run build 
+      working-directory: ./frontend
+
+    - name: create dist directory
+      run: mkdir ./dist
+
+    - name: copy example public to dist
+      run: cp -R ./frontend/public/* ./dist
+
+    - name: deploy to gh_pages
+      uses: maxheld83/ghpages@master
+      env:
+        BUILD_DIR: "dist/"
+        GH_PAT: ${{ secrets.GH_PAT }}

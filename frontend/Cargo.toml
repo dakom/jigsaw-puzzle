@@ -1,0 +1,53 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+#SOON: shipyard = { version = "^0.5", features = ["non_send", "non_sync"], default-features = false }
+shipyard = { git = "https://github.com/leudz/shipyard", default-features = false, features = ["proc","thread_local" ] }
+shipyard_scenegraph = { git = "https://github.com/dakom/shipyard-scenegraph", default-features = false, features = ["nalgebra_glm_math"]}
+nalgebra-glm = "0.16.0"
+wasm-bindgen = "0.2.79"
+js-sys = "0.3.56"
+wasm-bindgen-futures= "0.4.29"
+gloo-events = "0.1.1"
+awsm_web = { version = "0.32.3", features = ["tick", "webgl", "loaders", "audio", "dom", "serde_iso"], default-features = false }
+serde = "1.0.136"
+serde_json = "1.0.79"
+wee_alloc = { version = "0.4.5", optional = true }
+wasm-logger = { version = "0.2.0", optional = true }
+cfg-if = "1.0.0"
+log = "0.4.14"
+lazy_static = "1.4.0"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+derive_deref = "1.1.1"
+
+# [patch.crates-io]
+# shipyard = { version = "^0.3", features = ["proc", "non_send", "non_sync"], default-features = false}
+
+[dependencies.web-sys]
+version = "0.3.56"
+features = [
+    "console",
+    "MouseEvent",
+    "Document",
+    "Element",
+    "HtmlAnchorElement",
+    "HtmlElement",
+    "HtmlButtonElement",
+    "HtmlCanvasElement",
+    "CssStyleDeclaration",
+    "Node",
+    "Window",
+    "Performance",
+    "KeyboardEvent",
+    "WheelEvent"
+]
+[features]
+default = ["wee_alloc"]
+dev = ["wee_alloc", "wasm-logger", "console_error_panic_hook", "awsm_web/unwrap_verbose"]

@@ -1,0 +1,21 @@
+{
+	"name": "shipyard_scenegraph",
+	"version": "0.1.0",
+	"repository": "https://github.com/dakom/shipyard",
+	"license": "(MIT OR Apache-2.0)",
+	"scripts": {
+		"build": "cross-env RUSTUP_TOOLCHAIN=nightly npm run clean && rollup --config rollup.prod.js",
+		"start": "cross-env RUSTUP_TOOLCHAIN=nightly npm run clean && rollup --config rollup.dev.js --watch",
+		"clean": "rimraf ./public/wasm"
+	},
+	"dependencies": {
+		"@wasm-tool/rollup-plugin-rust": "^1.0.7",
+		"rollup": "^2.68.0"
+	},
+	"devDependencies": {
+		"cross-env": "^7.0.3",
+		"rimraf": "^3.0.2",
+		"rollup-plugin-livereload": "^2.0.5",
+		"rollup-plugin-serve": "^1.1.0"
+	}
+}
