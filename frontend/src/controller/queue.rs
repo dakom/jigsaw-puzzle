@@ -1,12 +1,3 @@
-/*
- * The input queue is optional
- * Downstream should process and remove events each tick
- * Note that the default uses insert() for all operations
- *
- * if other orderings are desired, replace InputListener
- * in the World with a custom implementation
- */
-
 use shipyard::*;
 use web_sys::KeyboardEvent;
 use std::collections::VecDeque;
@@ -53,6 +44,7 @@ impl InputQueue {
     }
 
     //careful - this can create long lists!
+    //but it's also crucial for situations where we want to accumulate delta
     pub fn insert_always(&mut self, input:Input) {
         self.0.push_back(input);
     }

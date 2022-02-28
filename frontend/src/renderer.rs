@@ -99,17 +99,6 @@ impl SceneRenderer {
                 BufferUsage::StaticDraw,
             ),
         )?;
-        //renderer.upload_buffer_to_attribute_name(
-            //geom_id,
-            //BufferData::new(
-                //&QUAD_GEOM_UNIT,
-                //BufferTarget::ArrayBuffer,
-                //BufferUsage::StaticDraw,
-                //),
-                //"a_vertex",
-                //&AttributeOptions::new(2, DataType::Float),
-                //)?;
-
 
         renderer.assign_vertex_array(
             vao_id,
@@ -242,6 +231,8 @@ impl SceneRenderer {
                 }
 
                 self.activate_vertex_array(self.vao_id).unwrap_ext();
+
+                // TODO - instancing?
                 self.draw_arrays(BeginMode::TriangleStrip, 0, 4);
             }
         }
@@ -261,10 +252,9 @@ impl SceneRenderer {
 
         transform.write_to_vf32(&mut scratch);
         self.upload_uniform_mat_4_name("u_model", &scratch)?;
-        //self.upload_uniform_fvals_2_name("u_full_size", (sheet.width, sheet.height))?;
         self.upload_uniform_fvals_2_name("u_cell_size", (cell.width, cell.height))?;
-        //self.upload_uniform_fvals_2_name("u_coord", (cell.x, cell.y))?;
 
+        // TODO - move to preliminary step, use instancing?
         self.upload_buffer(
                 self.tex_buffer_id,
                 BufferData::new(

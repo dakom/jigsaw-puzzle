@@ -1,5 +1,3 @@
-// Not technically part of rendering
-// But generic enough that it makes sense to include here
 // Pass in callbacks and hold onto it
 // When it's dropped, all the event listeners are too 
 //
