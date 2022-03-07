@@ -31,7 +31,7 @@ impl InputListeners {
         let window = web_sys::window().unwrap_ext();
 
         let listeners = vec![
-            EventListener::new(&dom_view(&world).canvas, "pointerdown", {
+            EventListener::new(&window, "pointerdown", {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {
@@ -49,7 +49,7 @@ impl InputListeners {
                 }
             }),
             
-            EventListener::new(&dom_view(&world).canvas, "pointermove", {
+            EventListener::new(&window, "pointermove", {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {

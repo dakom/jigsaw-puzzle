@@ -1,5 +1,5 @@
 use shipyard::*;
-use crate::world::{RENDER, CONTROLLER, CLEANUP};
+use crate::world::{RENDER, CONTROLLER, CLEANUP, GAMEPLAY};
 use crate::prelude::*;
 
 pub type UpdateTickViewMut<'a> = UniqueViewMut<'a, UpdateTick>;
@@ -15,6 +15,7 @@ pub fn begin(world: &World, _time: f64, _delta: f64) {
 
 pub fn update(world: &World, delta: f64) {
     *world.borrow::<UpdateTickViewMut>().unwrap_ext() = UpdateTick {delta};
+    world.run_workload(GAMEPLAY).unwrap_ext();
     //world.run_workload(PHYSICS).unwrap_ext();
 }
 

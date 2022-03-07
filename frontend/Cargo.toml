@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 shipyard = { git = "https://github.com/leudz/shipyard", default-features = false, features = ["proc","thread_local" ] }
 shipyard_scenegraph = { git = "https://github.com/dakom/shipyard-scenegraph", default-features = false, features = ["nalgebra_glm_math"]}
 nalgebra-glm = "0.16.0"
+nalgebra = "0.30.1"
 wasm-bindgen = "0.2.79"
 js-sys = "0.3.56"
 wasm-bindgen-futures= "0.4.29"

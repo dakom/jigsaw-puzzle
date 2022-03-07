@@ -18,29 +18,31 @@ impl InputQueue {
     //if they move, click, move - we still want the click to happen _after_ the move
     //of course this isn't the only use case - others are below
     pub fn insert_replace(&mut self, input:Input) {
-        let queue = &mut self.0;
+        self.insert_always(input);
+        //let queue = &mut self.0;
         
-        let entry = queue.iter_mut().find(|q_input| {
-            std::mem::discriminant(*q_input) == std::mem::discriminant(&input)
-        });
+        //let entry = queue.iter_mut().find(|q_input| {
+            //std::mem::discriminant(*q_input) == std::mem::discriminant(&input)
+        //});
 
-        if let Some(entry) = entry {
-            //replace what was there
-            *entry = input;
-        } else {
-            self.0.push_back(input);
-        }
+        //if let Some(entry) = entry {
+            ////replace what was there
+            //*entry = input;
+        //} else {
+            //self.0.push_back(input);
+        //}
     }
 
     //remove what was there, and add the new one to the end
-    pub fn _insert_move(&mut self, input:Input) {
-        let queue = &mut self.0;
+    fn _insert_move(&mut self, input:Input) {
+        self.insert_always(input);
+        //let queue = &mut self.0;
         
-        queue.retain(|q_input| {
-            std::mem::discriminant(q_input) != std::mem::discriminant(&input)
-        });
+        //queue.retain(|q_input| {
+            //std::mem::discriminant(q_input) != std::mem::discriminant(&input)
+        //});
 
-        self.0.push_back(input);
+        //self.0.push_back(input);
     }
 
     //careful - this can create long lists!

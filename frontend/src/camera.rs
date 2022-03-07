@@ -19,6 +19,8 @@ impl Default for Camera {
     }
 }
 
+pub const DEPTH_OFFSET:f32 = 1.0;
+
 impl Camera {
     pub fn get_matrix(&self, viewport_width: f64, viewport_height: f64) -> Mat4 {
 
@@ -27,6 +29,8 @@ impl Camera {
         let bottom = ((-viewport_height / (2.0 * self.zoom)) + self.y) as f32;
         let top = ((viewport_height / (2.0 * self.zoom)) + self.y) as f32;
 
-        Mat4::new_orthographic(left, right, bottom, top, -100.0, 100.0)
+        let z_depth = DEPTH_OFFSET * 125.0;
+        // change to multiply by n pieces
+        Mat4::new_orthographic(left, right, bottom, top, z_depth * -2.0, z_depth * 2.0)
     }
 }

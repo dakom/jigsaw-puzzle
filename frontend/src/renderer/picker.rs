@@ -17,6 +17,21 @@ use awsm_web::webgl::{
 use awsm_web::errors::Error;
 use shipyard::*;
 use crate::prelude::*;
+use derive_deref::{Deref, DerefMut};
+use std::collections::HashMap;
+
+pub type InteractableLookupView<'a> = UniqueView<'a, InteractableLookup>;
+pub type InteractableLookupViewMut<'a> = UniqueViewMut<'a, InteractableLookup>;
+
+#[derive(Component, Default)]
+pub struct InteractableLookup{
+    pub entity_to_index: HashMap<EntityId, u32>,
+    pub index_to_entity: HashMap<u32, EntityId>,
+}
+
+#[derive(Component)]
+pub struct Interactable(pub u32); // the entity id lookup
+
 
 #[derive(Component)]
 pub struct ScenePicker {
@@ -53,8 +68,8 @@ impl ScenePicker {
             TextureTarget::Texture2d,
             &SimpleTextureOptions {
                 flip_y: Some(false),
-                filter_min: Some(TextureMinFilter::Linear),
-                filter_mag: Some(TextureMagFilter::Linear),
+                filter_min: Some(TextureMinFilter::Nearest),
+                filter_mag: Some(TextureMagFilter::Nearest),
                 pixel_format: PixelFormat::Rgba,
                 ..SimpleTextureOptions::default()
             },

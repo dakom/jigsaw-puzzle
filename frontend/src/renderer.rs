@@ -1,11 +1,9 @@
-pub mod item;
 pub mod spritesheet;
-use item::*;
-mod picker;
-use picker::ScenePicker;
+pub mod picker;
+use picker::*;
 
-use crate::pieces::{PiecesOrder};
-use spritesheet::{PuzzleSheet, SpriteCell, SpriteSheet};
+use crate::{media::{PuzzleInfo, MediaView}, buffers::DataBuffers};
+use spritesheet::SpriteSheetTextureId;
 use crate::media::Media;
 use crate::prelude::*;
 use crate::camera::Camera;
@@ -36,16 +34,19 @@ use awsm_web::webgl::{
 };
 use crate::prelude::*;
 
+pub type RendererView<'a> = NonSendSync<UniqueView<'a, SceneRenderer>>;
 pub type RendererViewMut<'a> = NonSendSync<UniqueViewMut<'a, SceneRenderer>>;
 
 #[derive(Component)]
 pub struct SceneRenderer {
     renderer: WebGl1Renderer,
     picker_program_id: Id,
-    texture_program_id: Id,
-    vao_id: Id,
-    geom_buffer_id: Id,
-    tex_buffer_id: Id,
+    forward_program_id: Id,
+    forward_vao_id: Id,
+    picker_vao_id: Id,
+    pub geom_buffer_id: Id,
+    pub tex_buffer_id: Id,
+    pub color_buffer_id: Id,
     picker: Option<ScenePicker>
 }
 
@@ -66,7 +67,8 @@ impl DerefMut for SceneRenderer {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Pass {
     Picker,
-    Forward
+    Forward,
+    Debug
 }
 
 impl SceneRenderer {
@@ -77,37 +79,31 @@ impl SceneRenderer {
         //Everything else is the same API as webgl2 :)
         renderer.register_extension_instanced_arrays()?;
         renderer.register_extension_vertex_array()?;
-        
-        let vertex_id = renderer.compile_shader(&media.vertex_shader, ShaderType::Vertex)?;
-        let picker_fragment_id = renderer.compile_shader(&media.picker_fragment_shader, ShaderType::Fragment)?;
-        let texture_fragment_id = renderer.compile_shader(&media.texture_fragment_shader, ShaderType::Fragment)?;
-        
-        let picker_program_id = renderer.compile_program(&[vertex_id, picker_fragment_id])?;
-        let texture_program_id = renderer.compile_program(&[vertex_id, texture_fragment_id])?;
-
-        let vao_id = renderer.create_vertex_array()?;
-
-        //create quad data and get a buffer id
+      
+        //create buffer ids
+        let model_buffer_id = renderer.create_buffer()?;
         let geom_buffer_id = renderer.create_buffer()?;
         let tex_buffer_id = renderer.create_buffer()?;
+        let color_buffer_id = renderer.create_buffer()?;
 
-        renderer.upload_buffer(
-            geom_buffer_id,
-            BufferData::new(
-                &QUAD_GEOM_UNIT,
-                BufferTarget::ArrayBuffer,
-                BufferUsage::StaticDraw,
-            ),
-        )?;
+        // Setup forward
+        let forward_program_id = {
+            let vertex_id = renderer.compile_shader(&media.forward_vertex_shader, ShaderType::Vertex)?;
+            let fragment_id = renderer.compile_shader(&media.forward_fragment_shader, ShaderType::Fragment)?;
+
+            renderer.compile_program(&[vertex_id, fragment_id])?
+        };
+
+        let forward_vao_id = renderer.create_vertex_array()?;
 
         renderer.assign_vertex_array(
-            vao_id,
+            forward_vao_id,
             None,
             &[
                 VertexArray {
                     attribute: NameOrLoc::Name("a_geom_vertex"),
                     buffer_id: geom_buffer_id,
-                    opts: AttributeOptions::new(2, DataType::Float),
+                    opts: AttributeOptions::new(3, DataType::Float),
                 },
                 VertexArray {
                     attribute: NameOrLoc::Name("a_tex_vertex"),
@@ -117,12 +113,46 @@ impl SceneRenderer {
             ],
         )?;
 
+        // Setup picker
+        let picker_program_id = {
+            let vertex_id = renderer.compile_shader(&media.picker_vertex_shader, ShaderType::Vertex)?;
+            let fragment_id = renderer.compile_shader(&media.picker_fragment_shader, ShaderType::Fragment)?;
+
+            renderer.compile_program(&[vertex_id, fragment_id])?
+        };
+
+        let picker_vao_id = renderer.create_vertex_array()?;
+
+        renderer.assign_vertex_array(
+            picker_vao_id,
+            None,
+            &[
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_geom_vertex"),
+                    buffer_id: geom_buffer_id,
+                    opts: AttributeOptions::new(3, DataType::Float),
+                },
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_tex_vertex"),
+                    buffer_id: tex_buffer_id,
+                    opts: AttributeOptions::new(2, DataType::Float),
+                },
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_color_vertex"),
+                    buffer_id: color_buffer_id,
+                    opts: AttributeOptions::new(4, DataType::Float),
+                }
+            ],
+        )?;
+
         Ok(Self { 
             renderer, 
-            vao_id, 
+            forward_vao_id, 
+            picker_vao_id, 
             tex_buffer_id,
             geom_buffer_id,
-            texture_program_id, 
+            color_buffer_id,
+            forward_program_id, 
             picker_program_id, 
             picker: None
         } )
@@ -169,100 +199,63 @@ impl SceneRenderer {
     }
 
     fn draw_sprite_sheet(&mut self,
-        sprite_sheet: &SpriteSheet,
-        sprite_order: &[EntityId],
+        sprite_sheet_texture_id: Id,
         camera: &UniqueView<Camera>,
-        world_transforms: &View<WorldTransform>,
-        sprite_cells: &View<SpriteCell>, 
-        interactables: &View<Interactable>,
+        data_buffers: &DataBuffers,
+        n_pieces: u32,
         pass: Pass,
     ) -> Result<(), awsm_web::errors::Error> {
 
+
+        self.toggle(GlToggle::Blend, true);
+        self.set_blend_func(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha);
+        self.set_depth_func(awsm_web::webgl::CmpFunction::Less);
+        self.set_depth_mask(true);
+        self.toggle(GlToggle::DepthTest, true);
+
         let program_id = match pass {
-            Pass::Picker => {
-                if let Some(picker) = &mut self.picker {
-                    picker.start(&mut self.renderer)?;
-                    self.gl.clear_color(0.0, 0.0, 0.0, 0.0);
-                    self.picker_program_id
-                } else {
-                    return Ok(());
-                }
+            Pass::Picker | Pass::Debug => {
+                self.picker_program_id
             },
             Pass::Forward => {
-                self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
-                self.texture_program_id
+                self.forward_program_id
             }
         };
 
+        self.activate_program(program_id)?;
+        self.activate_texture_for_sampler_name(sprite_sheet_texture_id, "u_sampler")?;
+        let (_,_,viewport_width,viewport_height) = self.get_viewport();
+        self.upload_uniform_mat_4_name("u_camera", &camera.get_matrix(viewport_width as f64, viewport_height as f64).as_slice())?;
+
+        match pass {
+            Pass::Picker | Pass::Debug => {
+                if pass == Pass::Picker {
+                    self.picker.as_mut().unwrap_ext().start(&mut self.renderer)?;
+                }
+                self.gl.clear_color(0.0, 0.0, 0.0, 0.0);
+                self.activate_vertex_array(self.picker_vao_id).unwrap_ext();
+            },
+            Pass::Forward => {
+                self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
+                self.activate_vertex_array(self.forward_vao_id).unwrap_ext();
+            }
+        };
+
+        //Clear with the selected color
         self.clear(&[
             BufferMask::ColorBufferBit,
             BufferMask::DepthBufferBit,
         ]);
 
-        self.set_depth_mask(false);
-        self.toggle(GlToggle::Blend, true);
-        self.toggle(GlToggle::DepthTest, true);
-        self.set_blend_func(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha);
 
-
-        self.activate_program(program_id)?;
-        self.activate_texture_for_sampler_name(sprite_sheet.texture_id, "u_sampler")?;
-
-        let (_,_,viewport_width,viewport_height) = self.get_viewport();
-        self.upload_uniform_mat_4_name("u_camera", &camera.get_matrix(viewport_width as f64, viewport_height as f64).as_slice())?;
-
-
-        //renderer.upload_uniform_mat_4("u_size", &scaling_mat.as_slice())?;
-
-        for entity_id in sprite_order {
-            if let Ok((transform, sprite_cell, interactable)) = (world_transforms, sprite_cells, interactables).get(*entity_id) {
-                self.draw_cell_geom(transform, &sprite_sheet, sprite_cell)?;
-                match pass {
-                    Pass::Picker => {
-                        let index = interactable.0 + 1;
-                        let divisor = 0xFF as f32;
-                        let r = (0xFF & (index >> 16)) as f32 / divisor;
-                        let g = (0xFF & (index >> 8)) as f32 / divisor;
-                        let b = (0xFF & index) as f32 / divisor; 
-                        self.upload_uniform_fvals_4_name("u_color", (r,g,b,1.0))?;
-                    },
-                    Pass::Forward => {
-                    }
-                }
-
-                self.activate_vertex_array(self.vao_id).unwrap_ext();
-
-                // TODO - instancing?
-                self.draw_arrays(BeginMode::TriangleStrip, 0, 4);
-            }
-        }
-
+        // 2 attribute floats per vertex
+        let pieces_vertex_len = n_pieces * 6;
+        self.draw_arrays(BeginMode::Triangles, 0, pieces_vertex_len);
 
         if pass == Pass::Picker {
-            if let Some(picker) = &mut self.picker {
-                picker.finish(&mut self.renderer)?;
-            }
+            self.picker.as_mut().unwrap_ext().finish(&mut self.renderer)?;
         }
-        Ok(())
-    }
 
-
-    fn draw_cell_geom(&mut self, transform: &WorldTransform, sheet: &SpriteSheet, cell: &SpriteCell) -> Result<(), awsm_web::errors::Error> {
-        let mut scratch:[f32;16] = [0.0;16];
-
-        transform.write_to_vf32(&mut scratch);
-        self.upload_uniform_mat_4_name("u_model", &scratch)?;
-        self.upload_uniform_fvals_2_name("u_cell_size", (cell.width, cell.height))?;
-
-        // TODO - move to preliminary step, use instancing?
-        self.upload_buffer(
-                self.tex_buffer_id,
-                BufferData::new(
-                    cell.uvs,
-                    BufferTarget::ArrayBuffer,
-                    BufferUsage::DynamicDraw,
-                ),
-        ).unwrap_throw();
         Ok(())
     }
 }
@@ -270,14 +263,14 @@ impl SceneRenderer {
 
 pub fn render_sys(
     mut renderer: RendererViewMut, 
-    pieces_order: UniqueView<PiecesOrder>, 
-    puzzle_sheet: UniqueView<PuzzleSheet>, 
+    sprite_sheet_texture_id: UniqueView<SpriteSheetTextureId>,
+    data_buffers: UniqueView<DataBuffers>,
+    interactables: View<Interactable>,
     camera: UniqueView<Camera>, 
-    world_transforms: View<WorldTransform>, 
-    sprite_cells:View<SpriteCell>,
-    interactables:View<Interactable>,
 ) {
-    renderer.draw_sprite_sheet(&puzzle_sheet, &pieces_order, &camera, &world_transforms, &sprite_cells, &interactables, Pass::Picker).unwrap_ext();
-    renderer.draw_sprite_sheet(&puzzle_sheet, &pieces_order, &camera, &world_transforms, &sprite_cells, &interactables, Pass::Forward).unwrap_ext();
+    let n_pieces = interactables.iter().count() as u32;
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Forward).unwrap_ext();
+    //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Debug).unwrap_ext();
 }
 

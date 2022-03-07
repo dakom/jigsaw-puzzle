@@ -4,21 +4,26 @@ pub mod helpers;
 pub mod queue;
 
 use queue::*;
-use crate::pieces::PiecesOrder;
+use crate::buffers::DataBuffers;
+use crate::media::MediaView;
 use crate::{prelude::*, camera::Camera};
 use std::convert::TryInto;
 use crate::renderer::RendererViewMut;
 use shipyard::*;
 use shipyard_scenegraph::prelude::*;
-use crate::renderer::item::*;
+use crate::renderer::picker::*;
 use crate::config::{ZOOM_AMOUNT, ZOOM_MIN, ZOOM_MAX};
+use crate::pieces::PiecesOrder;
+use crate::animation::{get_tween_end, TweenPos};
+
 pub type ControllerViewMut<'a> = UniqueViewMut<'a, Controller>;
 
 #[derive(Component, PartialEq, Default)]
 pub struct Controller {
     pub drag: Option<DragController>,
     pub camera: CameraController,
-    pub first_selected: Option<EntityId>
+    pub first_selected: Option<EntityId>,
+    pub let_go: Option<EntityId>,
 }
 
 #[derive(Component, PartialEq)]
@@ -59,7 +64,7 @@ pub fn controller_set_sys(
             Input::PointerDown(x, y) => {
                 if controller.camera.pan.is_none() {
                     if let Some(index) = renderer.get_picker_index(x.try_into().unwrap_ext(), y.try_into().unwrap_ext()).unwrap_ext() {
-                        let entity = lookup.get(&index).unwrap_ext();
+                        let entity = lookup.index_to_entity.get(&index).unwrap_ext();
                         controller.drag = Some(DragController::Selected(*entity));
                         controller.first_selected = Some(*entity);
                     }
@@ -84,8 +89,12 @@ pub fn controller_set_sys(
                 }
             },
             Input::PointerUp(_, _, _, _, _, _) => {
+                if let Some(entity) = controller.drag.as_ref().and_then(|drag| drag.get_selected()) {
+                    controller.let_go = Some(entity);
+                }
                 controller.drag = None;
                 controller.camera.pan = None;
+                controller.first_selected = None; 
             },
             Input::KeyDown(key) => {
                 if key.space && controller.drag.is_none() {
@@ -123,8 +132,12 @@ pub fn controller_set_sys(
 // now we actually process the controller, and no longer care about "input"
 pub fn controller_process_sys(
     controller: ControllerViewMut,
+    media: MediaView,
+    lookup: InteractableLookupView,
+    mut entities: EntitiesViewMut,
     mut pieces_order: UniqueViewMut<PiecesOrder>,
     mut translations:ViewMut<Translation>,
+    mut tweens:ViewMut<TweenPos>,
     mut camera:UniqueViewMut<Camera>,
 ) {
 
@@ -136,6 +149,7 @@ pub fn controller_process_sys(
             }
         }
     }
+
     // the dividing by zoom is a happy accident.. haven't really thought it through :P
     // but it works great!
     if let Some(drag) = controller.drag.as_ref() {
@@ -160,6 +174,14 @@ pub fn controller_process_sys(
             camera.zoom = ZOOM_MAX.min(camera.zoom + ZOOM_AMOUNT);
         }
     }
+
+    if let Some(entity) = controller.let_go {
+        let translation = (&translations).get(entity).unwrap();
+        let index = lookup.entity_to_index.get(&entity).unwrap();
+        let piece = &media.pieces[*index as usize];
+        let tween_pos = get_tween_end(**translation, &piece);
+        entities.add_component(entity, &mut tweens, tween_pos);
+    }
 }
 
 // clear the controller after each tick
@@ -182,5 +204,6 @@ pub fn controller_clear_sys(
     }
 
     controller.first_selected = None;
+    controller.let_go = None;
 }
 
