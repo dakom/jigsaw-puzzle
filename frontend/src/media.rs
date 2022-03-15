@@ -70,6 +70,59 @@ pub struct PuzzleInfo {
     pub images: Vec<(u32, u32, u32, u32, u32, u32)>
 }
 
+impl PuzzleInfo {
+    // left bottom right top
+    // not the actual bounds really
+    // but the coordinates for pieces at these bounds
+    pub fn get_bounds(&self) -> (u32, u32, u32, u32) {
+        self.images
+            .iter()
+            .fold((u32::MAX, u32::MAX, 0, 0), |(mut left, mut bottom, mut right, mut top), image| {
+                let piece_x = image.2;
+                let piece_y = image.3;
+
+                if piece_x < left {
+                    left = piece_x;
+                }
+
+                if piece_y < bottom {
+                    bottom = piece_y;
+                }
+
+                if piece_x > right {
+                    right = piece_x;
+                }
+
+                if piece_y > top {
+                    top = piece_y;
+                }
+
+                (left, bottom, right, top) 
+            })
+
+    }
+    // but the coordinates for pieces at these bounds
+    pub fn get_max_piece_area(&self) -> (u32, u32) {
+        self.images
+            .iter()
+            .fold((0, 0), |(mut width, mut height), image| {
+                let piece_w = image.4;
+                let piece_h = image.5;
+
+                if piece_w > width {
+                    width = piece_w;
+                }
+                if piece_h > height {
+                    height = piece_h;
+                }
+
+
+                (width, height) 
+            })
+
+    }
+}
+
 
 #[derive(Debug)]
 pub struct MediaPiece {

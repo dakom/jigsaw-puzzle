@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::{
     renderer::{picker::*, RendererViewMut, spritesheet::SpriteSheetTextureId},
     media::*, camera::{Camera, DEPTH_OFFSET}, buffers::DataBuffers,
@@ -12,6 +14,17 @@ use crate::prelude::*;
 
 #[derive(Component, Deref, DerefMut)]
 pub struct PiecesOrder (pub Vec<EntityId>);
+
+#[derive(Component, PartialEq)]
+#[track(Modification)]
+pub enum PieceState {
+    Free,
+    Move,
+    Locked,
+
+}
+
+const LOCKED_Z:f32 = -DEPTH_OFFSET;
 
 fn get_z(index: usize) -> f32 {
     (index as f32 * DEPTH_OFFSET)
@@ -60,6 +73,7 @@ pub fn create(world:&World, stage_width: f32, stage_height: f32) {
             mut lookup: InteractableLookupViewMut,
             mut renderer: RendererViewMut, 
             mut interactables: ViewMut<Interactable>,
+            mut piece_states: ViewMut<PieceState>,
         | {
 
             let puzzle_info = &media.puzzle_info;
@@ -71,6 +85,8 @@ pub fn create(world:&World, stage_width: f32, stage_height: f32) {
                 let entity = entity_ids[index];
 
                 entities.add_component(entity, &mut interactables, Interactable(index as u32));
+                entities.add_component(entity, &mut piece_states, PieceState::Move);
+
                 lookup.index_to_entity.insert(index as u32, entity);
                 lookup.entity_to_index.insert(entity, index as u32);
 
@@ -85,11 +101,23 @@ pub fn create(world:&World, stage_width: f32, stage_height: f32) {
 
 pub fn pieces_order_sys(
     pieces_order: UniqueView<PiecesOrder>,
-    mut translations: ViewMut<Translation>
+    mut translations: ViewMut<Translation>,
+    piece_states: View<PieceState>
 ) {
     if pieces_order.is_modified() {
-        for (index, entity) in pieces_order.iter().enumerate() {
-            (&mut translations).get(*entity).unwrap().z = get_z(index);
-        }
+        for (index, entity) in pieces_order
+            .iter()
+            .enumerate() {
+                let mut t = (&mut translations).get(*entity).unwrap();
+                if piece_states
+                    .get(*entity)
+                    .map(|state| *state == PieceState::Locked)
+                    .unwrap_or(false) {
+                        t.z = LOCKED_Z;
+                    } else {
+                        t.z = get_z(index);
+                    }
+            }
     }
+
 }

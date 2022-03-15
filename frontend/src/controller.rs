@@ -13,8 +13,9 @@ use shipyard::*;
 use shipyard_scenegraph::prelude::*;
 use crate::renderer::picker::*;
 use crate::config::{ZOOM_AMOUNT, ZOOM_MIN, ZOOM_MAX};
-use crate::pieces::PiecesOrder;
-use crate::animation::{get_tween_end, TweenPos};
+use crate::pieces::{PiecesOrder, PieceState};
+use crate::animation::{TweenPos};
+use crate::evaluate::Evaluate;
 
 pub type ControllerViewMut<'a> = UniqueViewMut<'a, Controller>;
 
@@ -131,23 +132,27 @@ pub fn controller_set_sys(
 
 // now we actually process the controller, and no longer care about "input"
 pub fn controller_process_sys(
-    controller: ControllerViewMut,
     media: MediaView,
     lookup: InteractableLookupView,
+    piece_states: View<PieceState>,
+    mut controller: ControllerViewMut,
     mut entities: EntitiesViewMut,
     mut pieces_order: UniqueViewMut<PiecesOrder>,
     mut translations:ViewMut<Translation>,
-    mut tweens:ViewMut<TweenPos>,
+    mut evaluates:ViewMut<Evaluate>,
     mut camera:UniqueViewMut<Camera>,
 ) {
 
     if let Some(entity) = controller.first_selected {
-        if let Some(index) = pieces_order.iter().position(|x| *x == entity) {
-            if index != pieces_order.len() - 1 {
-                pieces_order.remove(index);
-                pieces_order.push(entity);
+        if let Ok(piece_state) = (&piece_states).get(entity) {
+            if *piece_state == PieceState::Free {
+                entities.add_component(entity, &mut evaluates, Evaluate::Select);
+            } else {
+                controller.drag = None;
             }
         }
+    } else if let Some(entity) = controller.let_go {
+        entities.add_component(entity, &mut evaluates, Evaluate::Release);
     }
 
     // the dividing by zoom is a happy accident.. haven't really thought it through :P
@@ -175,13 +180,6 @@ pub fn controller_process_sys(
         }
     }
 
-    if let Some(entity) = controller.let_go {
-        let translation = (&translations).get(entity).unwrap();
-        let index = lookup.entity_to_index.get(&entity).unwrap();
-        let piece = &media.pieces[*index as usize];
-        let tween_pos = get_tween_end(**translation, &piece);
-        entities.add_component(entity, &mut tweens, tween_pos);
-    }
 }
 
 // clear the controller after each tick

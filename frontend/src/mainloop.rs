@@ -16,7 +16,6 @@ pub fn begin(world: &World, _time: f64, _delta: f64) {
 pub fn update(world: &World, delta: f64) {
     *world.borrow::<UpdateTickViewMut>().unwrap_ext() = UpdateTick {delta};
     world.run_workload(GAMEPLAY).unwrap_ext();
-    //world.run_workload(PHYSICS).unwrap_ext();
 }
 
 pub fn draw(world: &World, _interpolation:f64) {

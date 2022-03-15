@@ -1,7 +1,7 @@
 use nalgebra_glm::Vec3;
 use shipyard::*;
 use shipyard::Delete;
-use crate::media::{MediaView, MediaPiece};
+use crate::{media::{MediaView, MediaPiece}, pieces::PiecesOrder, evaluate::Evaluate};
 use shipyard_scenegraph::prelude::*;
 use crate::mainloop::UpdateTick;
 
@@ -11,21 +11,27 @@ pub struct TweenPos {
     pub start: Vec3,
     pub end: Vec3,
     pub speed: f64,
+    pub evaluate_on_end: Option<Evaluate>
 }
 
 impl TweenPos {
-    pub fn new(start: Vec3, end: Vec3, speed: f64) -> Self {
+    pub fn new(start: Vec3, end: Vec3, speed: f64, evaluate_on_end: Option<Evaluate>) -> Self {
         Self {
             perc: 0.0,
             start,
             end,
             speed,
+            evaluate_on_end
         }
+    }
+
+    pub fn finished(&self) -> bool {
+        self.perc >= 1.0
     }
 }
 
 
-pub fn animation_sys(
+pub fn animation_update_sys(
     tick: UniqueView<UpdateTick>,
     mut tweens: ViewMut<TweenPos>,
     mut translations: ViewMut<Translation>
@@ -36,6 +42,28 @@ pub fn animation_sys(
             tween.perc = (tween.perc + (tween.speed * tick.delta)).min(1.0);
             translation.copy_from(&tween.start.lerp(&tween.end, tween.perc as f32));
         });
+
+}
+
+pub fn animation_end_sys(
+    tweens: View<TweenPos>,
+    pieces_order: UniqueView<PiecesOrder>,
+    entities: EntitiesViewMut,
+    mut evaluates: ViewMut<Evaluate>
+) {
+    (&tweens)
+        .iter()
+        .with_id()
+        .for_each(|(entity, tween)| {
+            if tween.finished() {
+                if let Some(evaluate) = tween.evaluate_on_end {
+                    entities.add_component(entity, &mut evaluates, evaluate);
+                }
+
+            }
+        });
+
+
 }
 
 pub fn animation_clear_sys(
@@ -44,24 +72,11 @@ pub fn animation_clear_sys(
     let ids_to_delete:Vec<EntityId> = (&tweens)
         .iter()
         .with_id()
-        .filter(|(_, tween)| if tween.perc >= 1.0 { true } else { false } )
+        .filter(|(_, tween)| tween.finished())
         .map(|(entity, _)| entity)
         .collect();
 
     for id in ids_to_delete {
         (&mut tweens).delete(id);
     }
-}
-
-pub fn get_tween_start(start: Vec3, area_width: f64, area_height: f64) -> TweenPos {
-    let x = js_sys::Math::random() * area_width;
-    let y = js_sys::Math::random() * area_height;
-    let end = Vec3::new(x as f32, y as f32, start.z);
-    TweenPos::new(start, end, 0.001)
-}
-
-
-pub fn get_tween_end(start: Vec3, piece: &MediaPiece) -> TweenPos {
-    let end = Vec3::new(piece.dest_x as f32, piece.dest_y as f32, start.z);
-    TweenPos::new(start, end, 0.001)
 }
