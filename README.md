@@ -1,4 +1,4 @@
-# [Play Now](https://dakom-jigsaw-puzzle.netlify.app/)
+# [Play Now](https://dakom.github.io/jigsaw-puzzle)
 
 # What is it?
 
@@ -12,13 +12,9 @@ Some other stuff under the hood ([awsm-web](https://github.com/dakom/awsm-web), 
 
 # Status
 
-Core graphics and io is done. Includes proper alpha click-through and other ux goodies.
-
 Still more to do:
 
 * Sound effects
-* Random distribution
 * Detect and lock-in correct placement
-* Animation
-* Instancing (get it down to one draw call)
-* Generate the spritesheet from raster pieces (less artifacts, more control)
+* Multiplayer
+* Reset the world
