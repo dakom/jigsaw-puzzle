@@ -15,6 +15,5 @@ Some other stuff under the hood ([awsm-web](https://github.com/dakom/awsm-web), 
 Still more to do:
 
 * Sound effects
-* Detect and lock-in correct placement
 * Multiplayer
-* Reset the world
+* Toggle outline mode (maybe) 
