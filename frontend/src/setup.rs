@@ -23,11 +23,11 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
 
     let dom = Dom::new();
 
-    dom.set_header_text("loading...");
+    dom.set_info_header_text("loading...");
 
     let media = Media::load(&dom).await;
 
-    dom.set_header_text("prepping...");
+    dom.set_info_header_text("prepping...");
 
     let scene_renderer = SceneRenderer::new(dom.create_gl_context(), &media)?;
 
@@ -54,15 +54,15 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
     EventListener::new(&world.borrow::<DomView>().unwrap_ext().window, "resize", on_resize).forget();
 
     world.run(|dom: DomView| {
-        dom.set_header_text("connecting...");
+        dom.set_info_header_text("connecting...");
     });
 
+    // wait for websocket connection
     websocket::connect(world.clone()).await?;
 
     //start the game loop!
     world.run(|dom: DomView| {
-        dom.set_header_text("click and drag, space-click to pan, mouse wheel to zoom");
-        //dom._clear_ui()
+        dom.start_game_ui();
     });
 
     let mut main_loop = MainLoop::new(

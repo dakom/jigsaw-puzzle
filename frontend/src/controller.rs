@@ -6,6 +6,7 @@ pub mod queue;
 use queue::*;
 use crate::buffers::DataBuffers;
 use crate::media::MediaView;
+use crate::reset::Reset;
 use crate::{prelude::*, camera::Camera};
 use std::convert::TryInto;
 use crate::renderer::RendererViewMut;
@@ -25,6 +26,7 @@ pub struct Controller {
     pub camera: CameraController,
     pub first_selected: Option<EntityId>,
     pub let_go: Option<EntityId>,
+    pub reset: bool,
 }
 
 #[derive(Component, PartialEq)]
@@ -125,6 +127,9 @@ pub fn controller_set_sys(
                     }
                 }
             }
+            Input::ResetButton => {
+                controller.reset = true;
+            },
             _ => {}
         }
      }
@@ -186,6 +191,7 @@ pub fn controller_process_sys(
 // but in a specific way which maintains some state
 pub fn controller_clear_sys(
     mut controller: ControllerViewMut,
+    mut reset: UniqueViewMut<Reset>
 ) {
     if let Some(drag) = controller.drag.as_ref() {
         controller.drag = match drag.get_selected() {
@@ -200,8 +206,12 @@ pub fn controller_clear_sys(
     if controller.camera.pan.is_some() {
         controller.camera.pan = Some((0.0, 0.0));
     }
+    if controller.reset {
+        reset.0 = true;
+    }
 
     controller.first_selected = None;
     controller.let_go = None;
+    controller.reset = false;
 }
 

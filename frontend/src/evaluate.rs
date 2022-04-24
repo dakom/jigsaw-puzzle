@@ -2,7 +2,7 @@ use shipyard::*;
 use crate::media::MediaView;
 use crate::renderer::picker::InteractableLookupView;
 use shipyard_scenegraph::prelude::*;
-use nalgebra_glm::Vec3;
+use nalgebra_glm::{Vec3, Vec2};
 use crate::media::MediaPiece;
 use crate::pieces::{PieceState, PiecesOrder};
 use crate::animation::TweenPos;
@@ -11,8 +11,8 @@ use crate::animation::TweenPos;
 pub enum Evaluate {
     Select,
     Release,
-    StartAnimFinished,
-    EndAnimFinished
+    FreeAnimFinished,
+    LockAnimFinished
 }
 
 pub fn evaluate_sys(
@@ -40,23 +40,25 @@ pub fn evaluate_sys(
                 Evaluate::Release => {
                     if let Some(index) = get_index() {
                         *piece_state = PieceState::Move;
-                        log::info!("release: {} {:?}", index, entity);
                         let piece = &media.pieces[index];
 
-                        let end = Vec3::new(piece.dest_x as f32, piece.dest_y as f32, translation.z);
-                        let tween_pos = TweenPos::new(**translation, end, 0.001, Some(Evaluate::EndAnimFinished));
-                        entities.add_component(entity, &mut tweens, tween_pos);
+
+                        let sqr_mag = nalgebra_glm::magnitude2(&(Vec2::new(translation.x, translation.y) - Vec2::new(piece.dest_x as f32, piece.dest_y as f32)));
+                        if sqr_mag < (piece.width / 4.0).powi(2) && sqr_mag < (piece.height / 4.0).powi(2) {
+                            *piece_state = PieceState::Locked;
+                            let end = Vec3::new(piece.dest_x as f32, piece.dest_y as f32, translation.z);
+                            let tween_pos = TweenPos::new(**translation, end, 0.001, Some(Evaluate::LockAnimFinished));
+                            entities.add_component(entity, &mut tweens, tween_pos);
+                        } else {
+                            *piece_state = PieceState::Free;
+                        }
                     }
                 },
-                Evaluate::StartAnimFinished => {
+                Evaluate::FreeAnimFinished => {
                     *piece_state = PieceState::Free;
                 },
-                Evaluate::EndAnimFinished => {
+                Evaluate::LockAnimFinished => {
                     *piece_state = PieceState::Locked;
-                    if let Some(index) = get_index() {
-                        pieces_order.remove(index);
-                        pieces_order.push(entity);
-                    }
                 },
             }
         });

@@ -92,6 +92,7 @@ dependencies = [
  "cfg-if",
  "console_error_panic_hook",
  "derive_deref",
+ "futures",
  "gloo-events",
  "js-sys",
  "lazy_static",

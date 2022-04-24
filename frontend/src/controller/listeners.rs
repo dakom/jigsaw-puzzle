@@ -21,6 +21,7 @@ pub struct InputListeners {
 // These listeners are pure input events.
 // they have no knowledge of a "controller" or anything else in the world
 // other than the DomView which it borrows
+// websocket events are dealt with in websocket.rs
 impl InputListeners {
     pub fn new(world:Rc<World>) -> Self 
     {
@@ -31,6 +32,15 @@ impl InputListeners {
         let window = web_sys::window().unwrap_ext();
 
         let listeners = vec![
+            dom_view(&world).with_btn(|btn| EventListener::new(btn, "click", {
+                let state = state.clone();
+                let world = world.clone();
+                move |event| {
+                    world.run(|mut queue:InputQueueViewMut| {
+                        queue.insert_replace(Input::ResetButton);
+                    });
+                }
+            })),
             EventListener::new(&window, "pointerdown", {
                 let state = state.clone();
                 let world = world.clone();

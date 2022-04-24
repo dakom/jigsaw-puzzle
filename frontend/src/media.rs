@@ -12,10 +12,12 @@ pub type MediaView<'a> = NonSendSync<UniqueView<'a, Media>>;
 
 #[derive(Component)]
 pub struct Media {
-    pub picker_vertex_shader: String,
-    pub picker_fragment_shader: String,
-    pub forward_fragment_shader: String,
-    pub forward_vertex_shader: String,
+    pub picker_vertex_shader: &'static str,
+    pub picker_fragment_shader: &'static str,
+    pub forward_fragment_shader: &'static str,
+    pub forward_vertex_shader: &'static str,
+    pub outline_fragment_shader: &'static str,
+    pub outline_vertex_shader: &'static str,
     pub pieces: Vec<MediaPiece>,
     pub puzzle_info: PuzzleInfo,
     pub puzzle_img: HtmlImageElement
@@ -24,12 +26,6 @@ pub struct Media {
 
 impl Media {
     pub async fn load(dom: &Dom) -> Self {
-
-        let forward_vertex_shader = fetch_url(&get_media_href("forward-vertex.glsl")).await.unwrap_ext().text().await.unwrap_ext();
-        let forward_fragment_shader = fetch_url(&get_media_href("forward-fragment.glsl")).await.unwrap_ext().text().await.unwrap_ext();
-        let picker_vertex_shader = fetch_url(&get_media_href("picker-vertex.glsl")).await.unwrap_ext().text().await.unwrap_ext();
-        let picker_fragment_shader = fetch_url(&get_media_href("picker-fragment.glsl")).await.unwrap_ext().text().await.unwrap_ext();
-
         let puzzle_img = loaders::image::load(get_puzzle_href("puzzle.png")).await.unwrap_ext();
         let puzzle_info:PuzzleInfo = fetch_url(&get_puzzle_href("puzzle.json")).await.unwrap_ext().json_from_str().await.unwrap_ext();
 
@@ -49,10 +45,12 @@ impl Media {
         }
 
         Self {
-            picker_vertex_shader,
-            picker_fragment_shader,
-            forward_fragment_shader,
-            forward_vertex_shader,
+            picker_vertex_shader: include_str!("./shaders/picker-vertex.glsl"),
+            picker_fragment_shader: include_str!("./shaders/picker-fragment.glsl"),
+            forward_vertex_shader: include_str!("./shaders/forward-vertex.glsl"),
+            forward_fragment_shader: include_str!("./shaders/forward-fragment.glsl"),
+            outline_vertex_shader: include_str!("./shaders/outline-vertex.glsl"),
+            outline_fragment_shader: include_str!("./shaders/outline-fragment.glsl"),
             pieces,
             puzzle_img,
             puzzle_info,

@@ -38,17 +38,34 @@ ul {
     z-index: 1;
 }
 
-/* info */
-.header {
+.ui-container {
+    display: flex;
+    flex-direction: row;
     position: absolute;
     top: 0;
     left: 0;
-    display: inline-block;
+}
+
+/* info */
+.header {
 
     background-color: forestgreen; 
     color: white;
+    padding: 10px;
 }
 
 .header > * {
+    margin: 10px;
+}
+
+/* btn */
+.button {
+    background-color: dodgerblue; 
+    color: white;
+    cursor: pointer;
+    padding: 10px;
+}
+
+.button > * {
     margin: 10px;
 }

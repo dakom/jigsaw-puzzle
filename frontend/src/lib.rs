@@ -13,17 +13,15 @@ mod camera;
 mod buffers;
 mod evaluate;
 mod animation;
-mod start;
 mod websocket;
+mod reset;
 
 use setup::setup;
-use start::start;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
 pub async fn run() -> Result<(), JsValue> {
-    let world = setup().await?;
-    start(world);
+    setup().await?;
     Ok(())
 
 }

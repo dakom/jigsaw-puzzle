@@ -1,32 +1,39 @@
 use std::rc::Rc;
-use crate::{renderer::{picker::Interactable, RendererView}, media::MediaView, evaluate::Evaluate, pieces::PieceState};
+use crate::{renderer::{picker::Interactable, RendererView}, media::MediaView, evaluate::Evaluate, pieces::PieceState, dom::DomView};
 use nalgebra_glm::Vec3;
 use shipyard::*;
 use shipyard_scenegraph::prelude::*;
 use crate::animation::TweenPos;
-use std::ops::Deref;
+use derive_deref::{Deref, DerefMut};
 
-pub fn distribute_pieces(world: Rc<World>) {
+#[derive(Component, Deref, DerefMut, Default)]
+pub struct Reset(pub bool);
 
-    world
-        .run(move |
-            renderer: RendererView,
-            media: MediaView,
-            mut entities: EntitiesViewMut,
-            interactables: View<Interactable>,
-            translations: View<Translation>,
-            piece_states: View<PieceState>,
-            mut tweens: ViewMut<TweenPos>,
-        | {
-            let bounds = media.puzzle_info.get_bounds();
-            let max_piece_area = media.puzzle_info.get_max_piece_area();
+pub fn reset_sys(
+    mut reset: UniqueViewMut<Reset>,
+    dom: DomView, 
+    renderer: RendererView,
+    media: MediaView,
+    mut entities: EntitiesViewMut,
+    interactables: View<Interactable>,
+    translations: View<Translation>,
+    piece_states: View<PieceState>,
+    mut tweens: ViewMut<TweenPos>,
+) {
 
-            for (entity, (translation, _, _)) in (&translations, &interactables, &piece_states).iter().with_id() {
-                let tween_pos = get_tween_start(**translation, bounds, max_piece_area);
+    if reset.0 {
+        let bounds = media.puzzle_info.get_bounds();
+        let max_piece_area = media.puzzle_info.get_max_piece_area();
 
-                entities.add_component(entity, &mut tweens, tween_pos);
-            }
-        });
+        for (entity, (translation, _, _)) in (&translations, &interactables, &piece_states).iter().with_id() {
+            let tween_pos = get_tween_start(**translation, bounds, max_piece_area);
+
+            entities.add_component(entity, &mut tweens, tween_pos);
+        }
+
+        dom.with_btn(|btn| btn.set_text_content(Some("reset")));
+        reset.0 = false;
+    }
 }
 
 fn get_tween_start(start: Vec3, bounds: (u32, u32, u32, u32), max_piece_area: (u32, u32)) -> TweenPos {
@@ -61,7 +68,7 @@ fn get_tween_start(start: Vec3, bounds: (u32, u32, u32, u32), max_piece_area: (u
     };
 
     let end = Vec3::new(x as f32, y as f32, start.z);
-    TweenPos::new(start, end, 0.001, Some(Evaluate::StartAnimFinished))
+    TweenPos::new(start, end, 0.001, Some(Evaluate::FreeAnimFinished))
 }
 
 #[repr(u8)]

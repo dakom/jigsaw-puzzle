@@ -42,9 +42,12 @@ pub struct SceneRenderer {
     renderer: WebGl1Renderer,
     picker_program_id: Id,
     forward_program_id: Id,
+    outline_program_id: Id,
     forward_vao_id: Id,
     picker_vao_id: Id,
+    outline_vao_id: Id,
     pub geom_buffer_id: Id,
+    pub outline_buffer_id: Id,
     pub tex_buffer_id: Id,
     pub color_buffer_id: Id,
     picker: Option<ScenePicker>
@@ -68,6 +71,7 @@ impl DerefMut for SceneRenderer {
 enum Pass {
     Picker,
     Forward,
+    Outline,
     Debug
 }
 
@@ -83,6 +87,7 @@ impl SceneRenderer {
         //create buffer ids
         let model_buffer_id = renderer.create_buffer()?;
         let geom_buffer_id = renderer.create_buffer()?;
+        let outline_buffer_id = renderer.create_buffer()?;
         let tex_buffer_id = renderer.create_buffer()?;
         let color_buffer_id = renderer.create_buffer()?;
 
@@ -145,15 +150,46 @@ impl SceneRenderer {
             ],
         )?;
 
+        // Setup outline
+        let outline_program_id = {
+            let vertex_id = renderer.compile_shader(&media.outline_vertex_shader, ShaderType::Vertex)?;
+            let fragment_id = renderer.compile_shader(&media.outline_fragment_shader, ShaderType::Fragment)?;
+
+            renderer.compile_program(&[vertex_id, fragment_id])?
+        };
+
+        let outline_vao_id = renderer.create_vertex_array()?;
+
+        renderer.assign_vertex_array(
+            outline_vao_id,
+            None,
+            &[
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_geom_vertex"),
+                    buffer_id: outline_buffer_id,
+                    opts: AttributeOptions::new(3, DataType::Float),
+                },
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_tex_vertex"),
+                    buffer_id: tex_buffer_id,
+                    opts: AttributeOptions::new(2, DataType::Float),
+                }
+            ],
+        )?;
+
+
         Ok(Self { 
             renderer, 
             forward_vao_id, 
             picker_vao_id, 
+            outline_vao_id, 
             tex_buffer_id,
             geom_buffer_id,
             color_buffer_id,
+            outline_buffer_id,
             forward_program_id, 
             picker_program_id, 
+            outline_program_id, 
             picker: None
         } )
     }
@@ -219,6 +255,9 @@ impl SceneRenderer {
             },
             Pass::Forward => {
                 self.forward_program_id
+            },
+            Pass::Outline => {
+                self.outline_program_id
             }
         };
 
@@ -239,13 +278,19 @@ impl SceneRenderer {
                 self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
                 self.activate_vertex_array(self.forward_vao_id).unwrap_ext();
             }
+            Pass::Outline => {
+                self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
+                self.activate_vertex_array(self.outline_vao_id).unwrap_ext();
+            }
         };
 
-        //Clear with the selected color
-        self.clear(&[
-            BufferMask::ColorBufferBit,
-            BufferMask::DepthBufferBit,
-        ]);
+        if pass != Pass::Outline {
+            //Clear with the selected color
+            self.clear(&[
+                BufferMask::ColorBufferBit,
+                BufferMask::DepthBufferBit,
+            ]);
+        }
 
 
         // 2 attribute floats per vertex
@@ -271,6 +316,7 @@ pub fn render_sys(
     let n_pieces = interactables.iter().count() as u32;
     renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
     renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Forward).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Outline).unwrap_ext();
     //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Debug).unwrap_ext();
 }
 

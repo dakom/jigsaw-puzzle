@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use nalgebra_glm::{Vec3, Mat4, Quat};
 use crate::prelude::*;
 use crate::dom::Dom;
+use crate::reset::{reset_sys, Reset};
 
 pub fn init_world(dom: Dom, media: Media, renderer:SceneRenderer) -> World {
     let world = World::new();
@@ -25,6 +26,7 @@ pub fn init_world(dom: Dom, media: Media, renderer:SceneRenderer) -> World {
     world.add_unique(InteractableLookup::default());
     world.add_unique(Camera::default());
     world.add_unique(DataBuffers::default());
+    world.add_unique(Reset::default());
     world.add_unique_non_send_sync(media);
     world.add_unique_non_send_sync(renderer);
     world.add_unique_non_send_sync(dom);
@@ -58,6 +60,7 @@ pub fn register_workloads(world:&World) {
         .unwrap_ext();
 
     Workload::builder(GAMEPLAY)
+        .with_system(reset_sys)
         .with_system(animation_update_sys)
         .with_system(animation_end_sys)
         .with_system(animation_clear_sys)

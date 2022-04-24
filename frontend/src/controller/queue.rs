@@ -74,6 +74,7 @@ pub enum Input {
     KeyDown(Key),
     KeyUp(Key),
     Wheel(WheelDeltaMode, WheelX, WheelY, WheelZ),
+    ResetButton,
 }
 
 
