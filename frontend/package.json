@@ -6,7 +6,8 @@
 	"scripts": {
 		"build": "cross-env RUSTUP_TOOLCHAIN=nightly npm run clean && rollup --config rollup.prod.js",
 		"start": "cross-env RUSTUP_TOOLCHAIN=nightly npm run clean && rollup --config rollup.dev.js --watch",
-		"clean": "rimraf ./public/wasm"
+		"clean": "rimraf ./public/wasm",
+                "cors": "node ./cors.js"
 	},
 	"dependencies": {
 		"@wasm-tool/rollup-plugin-rust": "^1.0.7",

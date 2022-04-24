@@ -15,11 +15,11 @@ use shipyard::*;
 use awsm_web::tick::{Raf, MainLoop, MainLoopOptions};
 use awsm_web::webgl::ResizeStrategy;
 use crate::prelude::*;
+use crate::websocket;
 
 pub async fn setup() -> Result<Rc<World>, JsValue> {
 
     init_logger();
-
 
     let dom = Dom::new();
 
@@ -52,6 +52,12 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
     on_resize(&web_sys::Event::new("").unwrap_ext());
 
     EventListener::new(&world.borrow::<DomView>().unwrap_ext().window, "resize", on_resize).forget();
+
+    world.run(|dom: DomView| {
+        dom.set_header_text("connecting...");
+    });
+
+    websocket::connect(world.clone()).await?;
 
     //start the game loop!
     world.run(|dom: DomView| {

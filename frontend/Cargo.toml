@@ -20,7 +20,6 @@ gloo-events = "0.1.1"
 awsm_web = { version = "0.32.3", features = ["tick", "webgl", "loaders", "audio", "dom", "serde_iso"], default-features = false }
 serde = "1.0.136"
 serde_json = "1.0.79"
-wee_alloc = { version = "0.4.5", optional = true }
 wasm-logger = { version = "0.2.0", optional = true }
 cfg-if = "1.0.0"
 log = "0.4.14"
@@ -47,8 +46,10 @@ features = [
     "Window",
     "Performance",
     "KeyboardEvent",
-    "WheelEvent"
+    "WheelEvent",
+    "WebSocket",
 ]
 [features]
-default = ["wee_alloc"]
-dev = ["wee_alloc", "wasm-logger", "console_error_panic_hook", "awsm_web/unwrap_verbose"]
+default = []
+remote-media = []
+dev = ["wasm-logger", "console_error_panic_hook", "awsm_web/unwrap_verbose"]

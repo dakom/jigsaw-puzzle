@@ -12,6 +12,7 @@ export default {
     plugins: [
         rust({
             serverPath: "wasm/",
+            cargoArgs: ["--features", "remote-media"],
             debug: false,
         }),
     ],
