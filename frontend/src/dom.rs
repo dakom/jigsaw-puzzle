@@ -8,6 +8,7 @@ use awsm_web::webgl::{
 };
 use std::rc::Rc;
 use std::cell::RefCell;
+use futures::channel::oneshot;
 use crate::prelude::*;
 
 pub mod ui;
@@ -26,35 +27,32 @@ pub struct DomState {
     pub window: Window,
     pub document: Document,
     pub body: HtmlElement,
-    pub canvas_ref: Rc<RefCell<Option<HtmlCanvasElement>>>,
+    pub canvas: HtmlCanvasElement,
 }
 
 impl DomState {
-    pub fn new(world: Rc<World>) -> Self {
+    pub async fn new(world: Rc<World>) -> Self {
         let window = web_sys::window().expect_throw("should have a Window");
         let document = window.document().expect_throw("should have a Document");
         let body = document.body().expect_throw("should have a Body");
 
-        let canvas_ref = Rc::new(RefCell::new(None));
+        theme::init_stylesheet();
 
-        let state = DomState {
-            ui: Ui::new(world),
+        let (mut tx, mut rx) = oneshot::channel();
+        dominator::append_dom(&body, Canvas::render(tx)); 
+
+        let ui = Ui::new(world);
+        dominator::append_dom(&body, Ui::render(ui.clone())); 
+
+        let canvas = rx.await.unwrap_ext();
+
+        DomState {
+            ui,
             window,
             document,
             body,
-            canvas_ref: canvas_ref.clone()
-        };
-
-        theme::init_stylesheet();
-
-        dominator::append_dom(&state.body, Canvas::render(canvas_ref)); 
-        dominator::append_dom(&state.body, Ui::render(state.ui.clone())); 
-
-        state
-    }
-
-    pub fn canvas(&self) -> web_sys::HtmlCanvasElement {
-        self.canvas_ref.borrow().as_ref().unwrap_ext().clone()
+            canvas
+        }
     }
 
     pub fn window_size(&self) -> (u32, u32) {
@@ -63,7 +61,7 @@ impl DomState {
 
     pub fn create_gl_context(&self) -> WebGlRenderingContext {
         //not using any webgl2 features so might as well stick with v1
-        get_webgl_context_1(&self.canvas(), Some(&WebGlContextOptions {
+        get_webgl_context_1(&self.canvas, Some(&WebGlContextOptions {
             alpha: false,
             ..WebGlContextOptions::default()
         })).unwrap_ext()

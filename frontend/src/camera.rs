@@ -20,6 +20,7 @@ impl Default for Camera {
 
 pub const DEPTH_OFFSET:f32 = 100.0;
 pub const Z_DEPTH:f32 = (DEPTH_OFFSET * 125.0) * 2.0; // TODO, make variable by number of pieces
+
 impl Camera {
     pub fn get_matrix(&self, viewport_width: f64, viewport_height: f64) -> Mat4 {
 

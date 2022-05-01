@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
-use dominator::class;
-use crate::dom::theme::THEME;
+use dominator::{class, pseudo};
+use crate::dom::theme;
 
 pub const UI_CONTAINER:Lazy<String> = Lazy::new(|| {
     class! {
@@ -14,7 +14,7 @@ pub const UI_CONTAINER:Lazy<String> = Lazy::new(|| {
 
 pub const HEADER:Lazy<String> = Lazy::new(|| {
     class! {
-        .style("background-color", "forestgreen")
+        .style("background-color", theme::GREEN)
         .style("color", "white")
         .style("padding", "10px")
     }
@@ -22,9 +22,12 @@ pub const HEADER:Lazy<String> = Lazy::new(|| {
 
 pub const BUTTON:Lazy<String> = Lazy::new(|| {
     class! {
-        .style("background-color", "dodgerblue")
-        .style("color", "white")
+        .style("background-color", theme::BLUE) 
+        .style("color", theme::WHITE)
         .style("cursor", "pointer")
         .style("padding", "10px")
+        .pseudo!(":hover", {
+          .style("background-color", theme::BLUE_HOVER)
+        })
     }
 });

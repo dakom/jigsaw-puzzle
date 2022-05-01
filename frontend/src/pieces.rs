@@ -94,8 +94,8 @@ pub fn create(world:&World, stage_width: f32, stage_height: f32) {
             }
 
 
-            data_buffers.flush_model(&mut renderer);
-            data_buffers.flush_static(&mut renderer);
+            data_buffers.flush_predefined(&mut renderer);
+            // the pieces and border will inherently be flushed via first transform change
         });
 }
 

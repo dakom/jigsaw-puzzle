@@ -5,18 +5,19 @@ use web_sys::HtmlCanvasElement;
 use crate::controller::queue::{InputQueueViewMut, Input};
 use once_cell::sync::Lazy;
 use std::cell::RefCell;
+use futures::channel::oneshot::{Sender};
 
 use dominator::{stylesheet, class, pseudo};
 
 pub struct Canvas {
 }
 impl Canvas {
-    pub fn render(canvas_ref: Rc<RefCell<Option<HtmlCanvasElement>>>) -> Dom {
+    pub fn render(tx: Sender<HtmlCanvasElement>) -> Dom {
         html!("canvas" => web_sys::HtmlCanvasElement, {
             .class(&*CLASS)
-            .after_inserted(clone!(canvas_ref => move |elem| {
-                *canvas_ref.borrow_mut() = Some(elem);
-            }))
+            .after_inserted(|elem| {
+                tx.send(elem);
+            })
         })
     }
 }

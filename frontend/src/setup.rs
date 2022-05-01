@@ -23,9 +23,7 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
     init_logger();
 
     let world = Rc::new(World::new());
-    let dom = DomState::new(world.clone());
-    //right now the media loading means the canvas MUST be ready by the time we call it
-    //but might be nicer to wait on an explicit DomState await
+    let dom = DomState::new(world.clone()).await;
     let media = Media::load().await;
 
     dom.ui.header.set_neq(HeaderState::Prepping);

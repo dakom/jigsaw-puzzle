@@ -41,7 +41,7 @@ impl Media {
                 height: *img_height as f32,
                 dest_x: *dest_x as f64,
                 dest_y: *dest_y as f64,
-                vertices: make_vertices(*img_width as f32, *img_height as f32)
+                vertices: crate::buffers::make_vertices(0.0, 0.0, 0.0, *img_width as f32, *img_height as f32)
             });
         }
 
@@ -145,21 +145,3 @@ pub struct MediaPiece {
     pub vertices: [f32;18] 
 }
 
-fn make_vertices(w: f32, h: f32) -> [f32;18] {
-    [
-        //TRIANGLE 1
-        //left-bottom
-        0.0, 0.0,0.0,
-        //left-top
-        0.0, h,0.0,
-        //right-bottom
-        w, 0.0,0.0,
-        //TRIANGLE 2
-        //right-bottom
-        w, 0.0,0.0,
-        //left-top
-        0.0, h,0.0,
-        //right-top
-        w, h, 0.0
-    ]
-}

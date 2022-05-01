@@ -88,7 +88,6 @@ enum Pass {
     PiecesBg,
     PiecesActive,
     PiecesOutline,
-    Border,
 }
 
 impl SceneRenderer {
@@ -219,6 +218,11 @@ impl SceneRenderer {
             vaos.border,
             None,
             &[
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_geom_vertex"),
+                    buffer_id: buffers.border,
+                    opts: AttributeOptions::new(3, DataType::Float),
+                },
             ],
         )?;
 
@@ -273,13 +277,32 @@ impl SceneRenderer {
         }
     }
 
+
+    fn draw_border(&mut self,
+        camera: &UniqueView<Camera>,
+        data_buffers: &DataBuffers,
+    ) -> Result<(), awsm_web::errors::Error> {
+
+        let program_id = self.programs.quad;
+        self.activate_program(program_id)?;
+
+        let (_,_,viewport_width,viewport_height) = self.get_viewport();
+        self.upload_uniform_mat_4_name("u_camera", &camera.get_matrix(viewport_width as f64, viewport_height as f64).as_slice())?;
+        self.upload_uniform_fvals_4_name("u_color", (1.0, 1.0, 1.0, 0.3));
+
+        self.activate_vertex_array(self.vaos.border)?;
+
+        self.draw_arrays(BeginMode::Triangles, 0, (data_buffers.border_vertices.len() / 3) as u32);
+
+        Ok(())
+    }
+
     fn draw_sprite_sheet(&mut self,
         sprite_sheet_texture_id: Id,
         camera: &UniqueView<Camera>,
         data_buffers: &DataBuffers,
         n_pieces: u32,
         pass: Pass,
-        clear_first: bool
     ) -> Result<(), awsm_web::errors::Error> {
 
 
@@ -299,9 +322,6 @@ impl SceneRenderer {
             Pass::PiecesOutline => {
                 self.programs.piece_outline
             },
-            Pass::Border => {
-                self.programs.quad
-            }
         };
 
         self.activate_program(program_id)?;
@@ -309,37 +329,29 @@ impl SceneRenderer {
         let (_,_,viewport_width,viewport_height) = self.get_viewport();
         self.upload_uniform_mat_4_name("u_camera", &camera.get_matrix(viewport_width as f64, viewport_height as f64).as_slice())?;
 
-        if pass == Pass::Picker {
-            self.gl.clear_color(0.0, 0.0, 0.0, 0.0);
-            self.picker.as_mut().unwrap_ext().start(&mut self.renderer)?;
-        } else {
-            if pass == Pass::PiecesActive {
+        match pass {
+            Pass::Picker => {
+                self.picker.as_mut().unwrap_ext().start(&mut self.renderer)?;
+                self.draw_clear(0.0, 0.0, 0.0, 0.0);
+            },
+            Pass::PiecesActive => {
                 self.upload_uniform_fval_name("u_alpha", 1.0);
-            } else if pass == Pass::PiecesBg {
+            },
+            Pass::PiecesBg => {
                 self.upload_uniform_fval_name("u_alpha", 0.1);
-            }
-            self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
-        }
+            },
+            _ => {}
+        };
 
         let vao_id = match pass {
             Pass::Picker => self.vaos.picker,
             Pass::PiecesActive => self.vaos.piece_active,
             Pass::PiecesBg | Pass::PiecesOutline => self.vaos.piece_bg,
-            Pass::Border => self.vaos.border
         };
 
         self.activate_vertex_array(vao_id)?;
 
-        if clear_first { 
-            //Clear with the selected color
-            self.clear(&[
-                BufferMask::ColorBufferBit,
-                BufferMask::DepthBufferBit,
-            ]);
-        }
-
-
-        // 2 attribute floats per vertex
+        // 2 triangles per piece, 3 floats per vertex
         let pieces_vertex_len = n_pieces * 6;
         self.draw_arrays(BeginMode::Triangles, 0, pieces_vertex_len);
 
@@ -350,6 +362,16 @@ impl SceneRenderer {
         Ok(())
     }
 
+
+    fn draw_clear(&mut self, r: f32, g: f32, b: f32, a: f32) { 
+        self.gl.clear_color(r, g, b, a);
+
+        self.clear(&[
+            BufferMask::ColorBufferBit,
+            BufferMask::DepthBufferBit,
+        ]);
+
+    }
 
 }
 
@@ -362,9 +384,12 @@ pub fn render_sys(
     camera: UniqueView<Camera>, 
 ) {
     let n_pieces = interactables.iter().count() as u32;
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker, true).unwrap_ext();
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesBg, true).unwrap_ext();
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesActive, false).unwrap_ext();
-    //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Debug).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
+    // clears the main drawing buffer - picker is cleared when its framebuffer is set
+    renderer.draw_clear(0.3, 0.3, 0.3, 1.0);
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesBg).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesActive).unwrap_ext();
+    renderer.draw_border(&camera, &data_buffers).unwrap_ext();
+    //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesOutline).unwrap_ext();
 }
 

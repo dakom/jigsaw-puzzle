@@ -14,7 +14,10 @@ pub struct DataBuffers {
     pub piece_bg_vertices: Vec<f32>,
     pub tex_vertices: Vec<f32>,
     pub picker_color_vertices: Vec<f32>,
+    pub border_vertices: Vec<f32>,
 }
+
+const BG_DEPTH:f32 = -Z_DEPTH + 2.0;
 
 pub fn transform_buffer_piece(buffer: &mut[f32], index: usize, piece:&MediaPiece, m:&Mat4, z_override: Option<f32>) {
 
@@ -41,7 +44,7 @@ impl DataBuffers {
     pub fn move_piece(&mut self, index: usize, piece:&MediaPiece, m:&Mat4) {
         transform_buffer_piece(&mut self.piece_active_vertices, index, piece, m, None); 
         if !self.has_set_bg {
-            transform_buffer_piece(&mut self.piece_bg_vertices, index, piece, m, Some(-Z_DEPTH + 2.0)); 
+            transform_buffer_piece(&mut self.piece_bg_vertices, index, piece, m, Some(BG_DEPTH)); 
         }
     }
 
@@ -94,11 +97,13 @@ impl DataBuffers {
         self.picker_color_vertices.extend(get_picker_colors());
     }
 
-    pub fn flush_model(&mut self, renderer:&mut SceneRenderer) {
+    pub fn flush_pieces(&mut self, renderer:&mut SceneRenderer, media: &Media) {
         if !self.has_set_bg {
             renderer.upload_buffer(renderer.buffers.piece_bg,
                 BufferData::new(&self.piece_bg_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
             ).unwrap_ext();
+
+            self.set_border(renderer, media);
         }
 
         renderer.upload_buffer(renderer.buffers.piece_active,
@@ -106,13 +111,36 @@ impl DataBuffers {
         ).unwrap_ext();
     }
 
-    pub fn flush_static(&mut self, renderer:&mut SceneRenderer) {
+    pub fn flush_predefined(&mut self, renderer:&mut SceneRenderer) {
         renderer.upload_buffer(renderer.buffers.texture,
             BufferData::new(&self.tex_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
         ).unwrap_ext();
 
         renderer.upload_buffer(renderer.buffers.picker_color,
             BufferData::new(&self.picker_color_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
+        ).unwrap_ext();
+    }
+
+    fn set_border(&mut self, renderer:&mut SceneRenderer, media: &Media) {
+        let size = 10.0;
+        let dsize = size * 2.0;
+        let width = media.puzzle_info.puzzle_width as f32;
+        let height = media.puzzle_info.puzzle_height as f32;
+
+
+        let mut vertices_left = make_vertices(-size, -size, BG_DEPTH, size, height + dsize).to_vec();
+        let mut vertices_right = make_vertices(width, -size, BG_DEPTH, size, height + dsize).to_vec();
+        let mut vertices_top = make_vertices(-size, -size, BG_DEPTH, width + dsize, size).to_vec();
+        let mut vertices_bottom = make_vertices(-size, height, BG_DEPTH, width + dsize, size).to_vec();
+
+        self.border_vertices = Vec::with_capacity(vertices_left.len() * 4);
+        self.border_vertices.extend(vertices_left.into_iter());
+        self.border_vertices.extend(vertices_right.into_iter());
+        self.border_vertices.extend(vertices_top.into_iter());
+        self.border_vertices.extend(vertices_bottom.into_iter());
+
+        renderer.upload_buffer(renderer.buffers.border,
+            BufferData::new(&self.border_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
         ).unwrap_ext();
     }
 }
@@ -141,8 +169,27 @@ pub fn update_buffers_sys(
         });
 
     if changed {
-        buffers.flush_model(&mut renderer);
+        buffers.flush_pieces(&mut renderer, &media);
         buffers.has_set_bg = true;
     }
 
+}
+
+pub fn make_vertices(x: f32, y: f32, z: f32, w: f32, h: f32) -> [f32;18] {
+    [
+        //TRIANGLE 1
+        //left-bottom
+        x,y,z,
+        //left-top
+        x, y+h,z,
+        //right-bottom
+        x+w, y,z,
+        //TRIANGLE 2
+        //right-bottom
+        x+w, y,z,
+        //left-top
+        x, y+h,z,
+        //right-top
+        x+w, y+h, z 
+    ]
 }

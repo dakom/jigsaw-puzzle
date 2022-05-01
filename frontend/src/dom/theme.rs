@@ -4,60 +4,12 @@ use cfg_if::cfg_if;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
-pub static THEME:Lazy<Theme> = Lazy::new(|| {
-    Theme::new()
-}); 
+pub const BLUE:&'static str = "dodgerblue";
+pub const BLUE_HOVER:&'static str = "rgb(20, 138, 255)";
+pub const WHITE:&'static str = "white";
+pub const RED:&'static str = "tomato";
+pub const GREEN:&'static str = "forestgreen";
 
-pub type Color = &'static str;
-pub struct ThemeButtonColor {
-    pub bg_regular: &'static str,
-    pub bg_hover: &'static str,
-    pub text_regular: &'static str,
-    pub text_hover: &'static str
-}
-
-pub struct Theme {
-    pub nav_bg_color: &'static str,
-    pub button_color_blue: ThemeButtonColor,
-    pub button_color_red: ThemeButtonColor,
-    pub h1_color: &'static str,
-    pub error_color: &'static str,
-    pub input_text_color: &'static str,
-    pub input_border_color: &'static str,
-}
-
-impl Theme {
-    pub fn new() -> Self {
-        Self {
-            nav_bg_color: BG_COLOR_1,
-            button_color_blue: BUTTON_COLOR_1, 
-            button_color_red: BUTTON_COLOR_2, 
-            h1_color: TEXT_COLOR_1, 
-            error_color: TEXT_COLOR_2, 
-            input_text_color: TEXT_COLOR_1, 
-            input_border_color: BORDER_COLOR_1, 
-        }
-    }
-}
-
-const TEXT_COLOR_1:Color = "#2a2a2a";
-const TEXT_COLOR_2:Color = "tomato";
-
-const BG_COLOR_1:Color = "beige";
-const BORDER_COLOR_1:Color = "darkgrey";
-const BUTTON_COLOR_1:ThemeButtonColor = ThemeButtonColor { 
-    bg_regular: "cornflowerblue", 
-    bg_hover: "dodgerblue",
-    text_regular: "white", 
-    text_hover: "white",
-};
-
-const BUTTON_COLOR_2:ThemeButtonColor = ThemeButtonColor { 
-    bg_regular: "tomato", 
-    bg_hover: "crimson",
-    text_regular: "white", 
-    text_hover: "white",
-};
 
 pub fn init_stylesheet() {
     stylesheet! {
@@ -83,7 +35,7 @@ pub fn init_stylesheet() {
 
     stylesheet! {
         "body", {
-            .style("font-size", "16rem")
+            .style("font-size", "12rem")
         }
     }
 
@@ -102,7 +54,6 @@ pub fn init_stylesheet() {
     stylesheet! {
         "h1", {
             .style("font-size", "20rem")
-            .style("color", THEME.h1_color)
         }
     }
 

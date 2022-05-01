@@ -37,7 +37,7 @@ impl InputListeners {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
                     state.is_pointer_down.store(true, Ordering::SeqCst);
                     state.first_pointer_move_x.store(x, Ordering::SeqCst);
                     state.first_pointer_move_y.store(y, Ordering::SeqCst);
@@ -55,7 +55,7 @@ impl InputListeners {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
                     if state.is_pointer_down.load(Ordering::SeqCst) {
                         
                         let (first_x, first_y) = (
@@ -105,7 +105,7 @@ impl InputListeners {
                 move |event| {
                     if state.is_pointer_down.load(Ordering::SeqCst) {
 
-                        let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
+                        let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
                         
                         let (first_x, first_y) = (
                             state.first_pointer_move_x.load(Ordering::SeqCst),
@@ -144,17 +144,17 @@ impl InputListeners {
                 }
             }),
 
-            EventListener::new(&dom_view(&world).canvas(), "click", {
+            EventListener::new(&dom_view(&world).canvas, "click", {
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
                     world.run(|mut queue:InputQueueViewMut| {
                         queue.insert_replace(Input::PointerClick( x, y ));
                     });
                 }
             }),
 
-            EventListener::new(&dom_view(&world).canvas(), "wheel", {
+            EventListener::new(&dom_view(&world).canvas, "wheel", {
                 let world = world.clone();
                 move |event| {
                     let event = event.dyn_ref::<web_sys::WheelEvent>().unwrap_ext();
