@@ -40,17 +40,32 @@ pub type RendererViewMut<'a> = NonSendSync<UniqueViewMut<'a, SceneRenderer>>;
 #[derive(Component)]
 pub struct SceneRenderer {
     renderer: WebGl1Renderer,
-    picker_program_id: Id,
-    forward_program_id: Id,
-    outline_program_id: Id,
-    forward_vao_id: Id,
-    picker_vao_id: Id,
-    outline_vao_id: Id,
-    pub geom_buffer_id: Id,
-    pub outline_buffer_id: Id,
-    pub tex_buffer_id: Id,
-    pub color_buffer_id: Id,
+    pub programs: Programs,
+    pub vaos: Vaos,
+    pub buffers: Buffers,
     picker: Option<ScenePicker>
+}
+
+pub struct Programs {
+    picker: Id,
+    piece_draw: Id,
+    piece_outline: Id,
+    quad: Id,
+}
+
+pub struct Vaos {
+    picker: Id,
+    piece_active: Id,
+    piece_bg: Id,
+    border: Id,
+}
+
+pub struct Buffers {
+    pub piece_active: Id,
+    pub piece_bg: Id,
+    pub border: Id,
+    pub texture: Id,
+    pub picker_color: Id
 }
 
 impl Deref for SceneRenderer {
@@ -70,9 +85,10 @@ impl DerefMut for SceneRenderer {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Pass {
     Picker,
-    Forward,
-    Outline,
-    Debug
+    PiecesBg,
+    PiecesActive,
+    PiecesOutline,
+    Border,
 }
 
 impl SceneRenderer {
@@ -85,111 +101,134 @@ impl SceneRenderer {
         renderer.register_extension_vertex_array()?;
       
         //create buffer ids
-        let model_buffer_id = renderer.create_buffer()?;
-        let geom_buffer_id = renderer.create_buffer()?;
-        let outline_buffer_id = renderer.create_buffer()?;
-        let tex_buffer_id = renderer.create_buffer()?;
-        let color_buffer_id = renderer.create_buffer()?;
-
-        // Setup forward
-        let forward_program_id = {
-            let vertex_id = renderer.compile_shader(&media.forward_vertex_shader, ShaderType::Vertex)?;
-            let fragment_id = renderer.compile_shader(&media.forward_fragment_shader, ShaderType::Fragment)?;
-
-            renderer.compile_program(&[vertex_id, fragment_id])?
+        let buffers = Buffers {
+            piece_active: renderer.create_buffer()?,
+            piece_bg: renderer.create_buffer()?,
+            texture: renderer.create_buffer()?,
+            picker_color: renderer.create_buffer()?,
+            border: renderer.create_buffer()?,
         };
 
-        let forward_vao_id = renderer.create_vertex_array()?;
+        //create programs
+        let programs = Programs {
 
+            picker: {
+                let vertex_id = renderer.compile_shader(&media.picker_vertex_shader, ShaderType::Vertex)?;
+                let fragment_id = renderer.compile_shader(&media.picker_fragment_shader, ShaderType::Fragment)?;
+
+                renderer.compile_program(&[vertex_id, fragment_id])?
+            },
+
+            piece_draw: {
+                let vertex_id = renderer.compile_shader(&media.piece_vertex_shader, ShaderType::Vertex)?;
+                let fragment_id = renderer.compile_shader(&media.piece_fragment_shader, ShaderType::Fragment)?;
+
+                renderer.compile_program(&[vertex_id, fragment_id])?
+            },
+
+            piece_outline: {
+                let vertex_id = renderer.compile_shader(&media.outline_vertex_shader, ShaderType::Vertex)?;
+                let fragment_id = renderer.compile_shader(&media.outline_fragment_shader, ShaderType::Fragment)?;
+
+                renderer.compile_program(&[vertex_id, fragment_id])?
+            },
+
+            quad: {
+                let vertex_id = renderer.compile_shader(&media.quad_vertex_shader, ShaderType::Vertex)?;
+                let fragment_id = renderer.compile_shader(&media.quad_fragment_shader, ShaderType::Fragment)?;
+
+                renderer.compile_program(&[vertex_id, fragment_id])?
+            },
+
+        };
+
+        //create vertex array objects
+
+
+        let vaos = Vaos {
+            picker: renderer.create_vertex_array()?,
+            piece_active: renderer.create_vertex_array()?,
+            piece_bg: renderer.create_vertex_array()?,
+            border: renderer.create_vertex_array()?,
+        };
+        
+
+        // assign vaos
+        // for the lookups to work by name, might as well just bind the program
+        // but it might be nicer to explicitly set via hardcoded_attribute_locations....
+        renderer.activate_program(programs.picker)?;
         renderer.assign_vertex_array(
-            forward_vao_id,
+            vaos.picker,
             None,
             &[
                 VertexArray {
                     attribute: NameOrLoc::Name("a_geom_vertex"),
-                    buffer_id: geom_buffer_id,
+                    buffer_id: buffers.piece_active,
                     opts: AttributeOptions::new(3, DataType::Float),
                 },
                 VertexArray {
                     attribute: NameOrLoc::Name("a_tex_vertex"),
-                    buffer_id: tex_buffer_id,
-                    opts: AttributeOptions::new(2, DataType::Float),
-                }
-            ],
-        )?;
-
-        // Setup picker
-        let picker_program_id = {
-            let vertex_id = renderer.compile_shader(&media.picker_vertex_shader, ShaderType::Vertex)?;
-            let fragment_id = renderer.compile_shader(&media.picker_fragment_shader, ShaderType::Fragment)?;
-
-            renderer.compile_program(&[vertex_id, fragment_id])?
-        };
-
-        let picker_vao_id = renderer.create_vertex_array()?;
-
-        renderer.assign_vertex_array(
-            picker_vao_id,
-            None,
-            &[
-                VertexArray {
-                    attribute: NameOrLoc::Name("a_geom_vertex"),
-                    buffer_id: geom_buffer_id,
-                    opts: AttributeOptions::new(3, DataType::Float),
-                },
-                VertexArray {
-                    attribute: NameOrLoc::Name("a_tex_vertex"),
-                    buffer_id: tex_buffer_id,
+                    buffer_id: buffers.texture,
                     opts: AttributeOptions::new(2, DataType::Float),
                 },
                 VertexArray {
                     attribute: NameOrLoc::Name("a_color_vertex"),
-                    buffer_id: color_buffer_id,
+                    buffer_id: buffers.picker_color,
                     opts: AttributeOptions::new(4, DataType::Float),
                 }
             ],
         )?;
 
-        // Setup outline
-        let outline_program_id = {
-            let vertex_id = renderer.compile_shader(&media.outline_vertex_shader, ShaderType::Vertex)?;
-            let fragment_id = renderer.compile_shader(&media.outline_fragment_shader, ShaderType::Fragment)?;
-
-            renderer.compile_program(&[vertex_id, fragment_id])?
-        };
-
-        let outline_vao_id = renderer.create_vertex_array()?;
-
+        renderer.activate_program(programs.piece_draw)?;
         renderer.assign_vertex_array(
-            outline_vao_id,
+            vaos.piece_active,
             None,
             &[
                 VertexArray {
                     attribute: NameOrLoc::Name("a_geom_vertex"),
-                    buffer_id: outline_buffer_id,
+                    buffer_id: buffers.piece_active,
                     opts: AttributeOptions::new(3, DataType::Float),
                 },
                 VertexArray {
                     attribute: NameOrLoc::Name("a_tex_vertex"),
-                    buffer_id: tex_buffer_id,
+                    buffer_id: buffers.texture,
                     opts: AttributeOptions::new(2, DataType::Float),
                 }
             ],
         )?;
 
+        renderer.assign_vertex_array(
+            vaos.piece_bg,
+            None,
+            &[
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_geom_vertex"),
+                    buffer_id: buffers.piece_bg,
+                    opts: AttributeOptions::new(3, DataType::Float),
+                },
+                VertexArray {
+                    attribute: NameOrLoc::Name("a_tex_vertex"),
+                    buffer_id: buffers.texture,
+                    opts: AttributeOptions::new(2, DataType::Float),
+                }
+            ],
+        )?;
+
+        renderer.activate_program(programs.quad)?;
+        renderer.assign_vertex_array(
+            vaos.border,
+            None,
+            &[
+            ],
+        )?;
+
+
 
         Ok(Self { 
             renderer, 
-            forward_vao_id, 
-            picker_vao_id, 
-            outline_vao_id, 
-            tex_buffer_id,
-            geom_buffer_id,
-            color_buffer_id,
-            outline_buffer_id,
-            forward_program_id, 
-            picker_program_id, 
-            outline_program_id, 
+            programs,
+            buffers,
+            vaos,
             picker: None
         } )
     }
@@ -240,6 +279,7 @@ impl SceneRenderer {
         data_buffers: &DataBuffers,
         n_pieces: u32,
         pass: Pass,
+        clear_first: bool
     ) -> Result<(), awsm_web::errors::Error> {
 
 
@@ -250,14 +290,17 @@ impl SceneRenderer {
         self.toggle(GlToggle::DepthTest, true);
 
         let program_id = match pass {
-            Pass::Picker | Pass::Debug => {
-                self.picker_program_id
+            Pass::Picker => {
+                self.programs.picker
             },
-            Pass::Forward => {
-                self.forward_program_id
+            Pass::PiecesActive | Pass::PiecesBg => {
+                self.programs.piece_draw
             },
-            Pass::Outline => {
-                self.outline_program_id
+            Pass::PiecesOutline => {
+                self.programs.piece_outline
+            },
+            Pass::Border => {
+                self.programs.quad
             }
         };
 
@@ -266,25 +309,28 @@ impl SceneRenderer {
         let (_,_,viewport_width,viewport_height) = self.get_viewport();
         self.upload_uniform_mat_4_name("u_camera", &camera.get_matrix(viewport_width as f64, viewport_height as f64).as_slice())?;
 
-        match pass {
-            Pass::Picker | Pass::Debug => {
-                if pass == Pass::Picker {
-                    self.picker.as_mut().unwrap_ext().start(&mut self.renderer)?;
-                }
-                self.gl.clear_color(0.0, 0.0, 0.0, 0.0);
-                self.activate_vertex_array(self.picker_vao_id).unwrap_ext();
-            },
-            Pass::Forward => {
-                self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
-                self.activate_vertex_array(self.forward_vao_id).unwrap_ext();
+        if pass == Pass::Picker {
+            self.gl.clear_color(0.0, 0.0, 0.0, 0.0);
+            self.picker.as_mut().unwrap_ext().start(&mut self.renderer)?;
+        } else {
+            if pass == Pass::PiecesActive {
+                self.upload_uniform_fval_name("u_alpha", 1.0);
+            } else if pass == Pass::PiecesBg {
+                self.upload_uniform_fval_name("u_alpha", 0.1);
             }
-            Pass::Outline => {
-                self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
-                self.activate_vertex_array(self.outline_vao_id).unwrap_ext();
-            }
+            self.gl.clear_color(0.3, 0.3, 0.3, 1.0);
+        }
+
+        let vao_id = match pass {
+            Pass::Picker => self.vaos.picker,
+            Pass::PiecesActive => self.vaos.piece_active,
+            Pass::PiecesBg | Pass::PiecesOutline => self.vaos.piece_bg,
+            Pass::Border => self.vaos.border
         };
 
-        if pass != Pass::Outline {
+        self.activate_vertex_array(vao_id)?;
+
+        if clear_first { 
             //Clear with the selected color
             self.clear(&[
                 BufferMask::ColorBufferBit,
@@ -303,6 +349,8 @@ impl SceneRenderer {
 
         Ok(())
     }
+
+
 }
 
 
@@ -314,9 +362,9 @@ pub fn render_sys(
     camera: UniqueView<Camera>, 
 ) {
     let n_pieces = interactables.iter().count() as u32;
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Forward).unwrap_ext();
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Outline).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker, true).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesBg, true).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesActive, false).unwrap_ext();
     //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Debug).unwrap_ext();
 }
 

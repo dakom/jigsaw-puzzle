@@ -14,7 +14,7 @@ export default {
     plugins: [
         rust({
             serverPath: "wasm/",
-            debug: false,
+            debug: true,
             watchPatterns: ["src/**", "public/media/**/*.glsl", "public/**/*.html", "public/**/*.css"],
             cargoArgs: ["--features", "dev"],
             watch: true,

@@ -1,7 +1,8 @@
 use crate::dom::DomView;
+use crate::dom::ui::state::{HeaderState, ButtonState};
 use crate::renderer::RendererViewMut;
 use crate::{
-    dom::Dom,
+    dom::DomState,
     controller::listeners::InputListeners,
     mainloop,
     media::Media,
@@ -21,23 +22,25 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
 
     init_logger();
 
-    let dom = Dom::new();
+    let world = Rc::new(World::new());
+    let dom = DomState::new(world.clone());
+    //right now the media loading means the canvas MUST be ready by the time we call it
+    //but might be nicer to wait on an explicit DomState await
+    let media = Media::load().await;
 
-    dom.set_info_header_text("loading...");
-
-    let media = Media::load(&dom).await;
-
-    dom.set_info_header_text("prepping...");
+    dom.ui.header.set_neq(HeaderState::Prepping);
 
     let scene_renderer = SceneRenderer::new(dom.create_gl_context(), &media)?;
 
     let (stage_width, stage_height) = dom.window_size();
 
-    let world = Rc::new(init_world(
+    init_world(
+        &world,
         dom,
         media,
         scene_renderer
-    ));
+    );
+
 
     let on_resize = {
         let world = Rc::clone(&world);
@@ -54,7 +57,7 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
     EventListener::new(&world.borrow::<DomView>().unwrap_ext().window, "resize", on_resize).forget();
 
     world.run(|dom: DomView| {
-        dom.set_info_header_text("connecting...");
+        dom.ui.header.set_neq(HeaderState::Connecting);
     });
 
     // wait for websocket connection
@@ -62,7 +65,8 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
 
     //start the game loop!
     world.run(|dom: DomView| {
-        dom.start_game_ui();
+        dom.ui.header.set_neq(HeaderState::Playing);
+        dom.ui.button.set_neq(Some(ButtonState::Start));
     });
 
     let mut main_loop = MainLoop::new(

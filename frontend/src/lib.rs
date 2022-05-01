@@ -23,5 +23,4 @@ use wasm_bindgen::prelude::*;
 pub async fn run() -> Result<(), JsValue> {
     setup().await?;
     Ok(())
-
 }

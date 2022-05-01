@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{
     renderer::{picker::*, RendererViewMut, spritesheet::SpriteSheetTextureId},
-    media::*, camera::{Camera, DEPTH_OFFSET}, buffers::DataBuffers,
+    media::*, camera::{Camera, Z_DEPTH, DEPTH_OFFSET}, buffers::DataBuffers,
 };
 use crate::prelude::*;
 use derive_deref::{Deref, DerefMut};
@@ -24,7 +24,7 @@ pub enum PieceState {
 
 }
 
-const LOCKED_Z:f32 = -DEPTH_OFFSET;
+const LOCKED_Z:f32 = DEPTH_OFFSET - 2.0;
 
 fn get_z(index: usize) -> f32 {
     (index as f32 * DEPTH_OFFSET)

@@ -6,12 +6,12 @@ use nalgebra::geometry::Point3;
 use shipyard::*;
 use shipyard_scenegraph::prelude::*;
 use awsm_web::prelude::*;
-use crate::{media::{MediaPiece, PuzzleInfo, Media, MediaView}, renderer::{SceneRenderer, picker::{InteractableLookup, Interactable}, RendererViewMut}};
+use crate::{media::{MediaPiece, PuzzleInfo, Media, MediaView}, renderer::{SceneRenderer, picker::{InteractableLookup, Interactable}, RendererViewMut}, camera::Z_DEPTH};
 #[derive(Component, Default)]
 pub struct DataBuffers {
-    pub has_set_outline: bool,
-    pub geom_vertices: Vec<f32>,
-    pub outline_vertices: Vec<f32>,
+    pub has_set_bg: bool,
+    pub piece_active_vertices: Vec<f32>,
+    pub piece_bg_vertices: Vec<f32>,
     pub tex_vertices: Vec<f32>,
     pub picker_color_vertices: Vec<f32>,
 }
@@ -39,9 +39,9 @@ pub fn transform_buffer_piece(buffer: &mut[f32], index: usize, piece:&MediaPiece
 }
 impl DataBuffers {
     pub fn move_piece(&mut self, index: usize, piece:&MediaPiece, m:&Mat4) {
-        transform_buffer_piece(&mut self.geom_vertices, index, piece, m, None); 
-        if !self.has_set_outline {
-            transform_buffer_piece(&mut self.outline_vertices, index, piece, m, Some(0.0)); 
+        transform_buffer_piece(&mut self.piece_active_vertices, index, piece, m, None); 
+        if !self.has_set_bg {
+            transform_buffer_piece(&mut self.piece_bg_vertices, index, piece, m, Some(-Z_DEPTH + 2.0)); 
         }
     }
 
@@ -88,33 +88,30 @@ impl DataBuffers {
 
         };
 
-        self.geom_vertices.extend(piece.vertices);
-        self.outline_vertices.extend(piece.vertices);
+        self.piece_active_vertices.extend(piece.vertices);
+        self.piece_bg_vertices.extend(piece.vertices);
         self.tex_vertices.extend(get_uvs());
         self.picker_color_vertices.extend(get_picker_colors());
     }
 
     pub fn flush_model(&mut self, renderer:&mut SceneRenderer) {
-        if !self.has_set_outline {
-            renderer.upload_buffer(renderer.outline_buffer_id,
-                BufferData::new(&self.outline_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
+        if !self.has_set_bg {
+            renderer.upload_buffer(renderer.buffers.piece_bg,
+                BufferData::new(&self.piece_bg_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
             ).unwrap_ext();
         }
 
-        renderer.upload_buffer(renderer.geom_buffer_id,
-            BufferData::new(&self.geom_vertices, BufferTarget::ArrayBuffer, BufferUsage::DynamicDraw)
+        renderer.upload_buffer(renderer.buffers.piece_active,
+            BufferData::new(&self.piece_active_vertices, BufferTarget::ArrayBuffer, BufferUsage::DynamicDraw)
         ).unwrap_ext();
     }
 
     pub fn flush_static(&mut self, renderer:&mut SceneRenderer) {
-
-
-
-        renderer.upload_buffer(renderer.tex_buffer_id,
+        renderer.upload_buffer(renderer.buffers.texture,
             BufferData::new(&self.tex_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
         ).unwrap_ext();
 
-        renderer.upload_buffer(renderer.color_buffer_id,
+        renderer.upload_buffer(renderer.buffers.picker_color,
             BufferData::new(&self.picker_color_vertices, BufferTarget::ArrayBuffer, BufferUsage::StaticDraw)
         ).unwrap_ext();
     }
@@ -145,7 +142,7 @@ pub fn update_buffers_sys(
 
     if changed {
         buffers.flush_model(&mut renderer);
-        buffers.has_set_outline = true;
+        buffers.has_set_bg = true;
     }
 
 }

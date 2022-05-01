@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering;
 use std::convert::TryInto;
 use super::state::InputState;
 use shipyard::*;
-use crate::dom::{Dom, DomView};
+use crate::dom::{DomState, DomView};
 use super::queue::*;
 use super::helpers::get_canvas_x_y;
 use crate::prelude::*;
@@ -22,6 +22,7 @@ pub struct InputListeners {
 // they have no knowledge of a "controller" or anything else in the world
 // other than the DomView which it borrows
 // websocket events are dealt with in websocket.rs
+// ui events are pushed from within their components
 impl InputListeners {
     pub fn new(world:Rc<World>) -> Self 
     {
@@ -32,20 +33,11 @@ impl InputListeners {
         let window = web_sys::window().unwrap_ext();
 
         let listeners = vec![
-            dom_view(&world).with_btn(|btn| EventListener::new(btn, "click", {
-                let state = state.clone();
-                let world = world.clone();
-                move |event| {
-                    world.run(|mut queue:InputQueueViewMut| {
-                        queue.insert_replace(Input::ResetButton);
-                    });
-                }
-            })),
             EventListener::new(&window, "pointerdown", {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
                     state.is_pointer_down.store(true, Ordering::SeqCst);
                     state.first_pointer_move_x.store(x, Ordering::SeqCst);
                     state.first_pointer_move_y.store(y, Ordering::SeqCst);
@@ -63,7 +55,7 @@ impl InputListeners {
                 let state = state.clone();
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
                     if state.is_pointer_down.load(Ordering::SeqCst) {
                         
                         let (first_x, first_y) = (
@@ -113,7 +105,7 @@ impl InputListeners {
                 move |event| {
                     if state.is_pointer_down.load(Ordering::SeqCst) {
 
-                        let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
+                        let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
                         
                         let (first_x, first_y) = (
                             state.first_pointer_move_x.load(Ordering::SeqCst),
@@ -152,17 +144,17 @@ impl InputListeners {
                 }
             }),
 
-            EventListener::new(&dom_view(&world).canvas, "click", {
+            EventListener::new(&dom_view(&world).canvas(), "click", {
                 let world = world.clone();
                 move |event| {
-                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas, event);
+                    let (x, y) = get_canvas_x_y(&dom_view(&world).canvas(), event);
                     world.run(|mut queue:InputQueueViewMut| {
                         queue.insert_replace(Input::PointerClick( x, y ));
                     });
                 }
             }),
 
-            EventListener::new(&dom_view(&world).canvas, "wheel", {
+            EventListener::new(&dom_view(&world).canvas(), "wheel", {
                 let world = world.clone();
                 move |event| {
                     let event = event.dyn_ref::<web_sys::WheelEvent>().unwrap_ext();

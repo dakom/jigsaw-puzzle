@@ -5,19 +5,20 @@ use serde::Deserialize;
 use shipyard::*;
 use web_sys::HtmlImageElement;
 use crate::prelude::*;
-use crate::dom::Dom;
 
 pub type MediaViewMut<'a> = NonSendSync<UniqueViewMut<'a, Media>>;
 pub type MediaView<'a> = NonSendSync<UniqueView<'a, Media>>;
 
 #[derive(Component)]
 pub struct Media {
-    pub picker_vertex_shader: &'static str,
-    pub picker_fragment_shader: &'static str,
-    pub forward_fragment_shader: &'static str,
-    pub forward_vertex_shader: &'static str,
-    pub outline_fragment_shader: &'static str,
-    pub outline_vertex_shader: &'static str,
+    pub picker_vertex_shader: String,
+    pub picker_fragment_shader: String,
+    pub piece_fragment_shader: String,
+    pub piece_vertex_shader: String,
+    pub outline_vertex_shader: String,
+    pub outline_fragment_shader: String,
+    pub quad_fragment_shader: String,
+    pub quad_vertex_shader: String,
     pub pieces: Vec<MediaPiece>,
     pub puzzle_info: PuzzleInfo,
     pub puzzle_img: HtmlImageElement
@@ -25,7 +26,7 @@ pub struct Media {
 
 
 impl Media {
-    pub async fn load(dom: &Dom) -> Self {
+    pub async fn load() -> Self {
         let puzzle_img = loaders::image::load(get_puzzle_href("puzzle.png")).await.unwrap_ext();
         let puzzle_info:PuzzleInfo = fetch_url(&get_puzzle_href("puzzle.json")).await.unwrap_ext().json_from_str().await.unwrap_ext();
 
@@ -44,13 +45,20 @@ impl Media {
             });
         }
 
+        let piece_vertex = include_str!("./shaders/piece-vertex.glsl");
+        let piece_fragment = include_str!("./shaders/piece-fragment.glsl");
+        let quad_vertex = include_str!("./shaders/quad-vertex.glsl");
+        let quad_fragment = include_str!("./shaders/quad-fragment.glsl");
+
         Self {
-            picker_vertex_shader: include_str!("./shaders/picker-vertex.glsl"),
-            picker_fragment_shader: include_str!("./shaders/picker-fragment.glsl"),
-            forward_vertex_shader: include_str!("./shaders/forward-vertex.glsl"),
-            forward_fragment_shader: include_str!("./shaders/forward-fragment.glsl"),
-            outline_vertex_shader: include_str!("./shaders/outline-vertex.glsl"),
-            outline_fragment_shader: include_str!("./shaders/outline-fragment.glsl"),
+            picker_vertex_shader: format!("#define PICKER\n{}", piece_vertex), 
+            picker_fragment_shader: format!("#define PICKER\n{}", piece_fragment), 
+            outline_vertex_shader: format!("#define OUTLINE\n{}", piece_vertex), 
+            outline_fragment_shader: format!("#define OUTLINE\n{}", piece_fragment), 
+            piece_vertex_shader: piece_vertex.to_string(), 
+            piece_fragment_shader: piece_fragment.to_string(), 
+            quad_vertex_shader: quad_vertex.to_string(), 
+            quad_fragment_shader: quad_fragment.to_string(), 
             pieces,
             puzzle_img,
             puzzle_info,

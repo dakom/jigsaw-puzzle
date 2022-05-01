@@ -14,11 +14,11 @@ use crate::animation::{animation_update_sys, animation_end_sys, animation_clear_
 use std::collections::HashMap;
 use nalgebra_glm::{Vec3, Mat4, Quat};
 use crate::prelude::*;
-use crate::dom::Dom;
+use crate::dom::DomState;
 use crate::reset::{reset_sys, Reset};
+use std::rc::Rc;
 
-pub fn init_world(dom: Dom, media: Media, renderer:SceneRenderer) -> World {
-    let world = World::new();
+pub fn init_world(world: &World, dom: DomState, media: Media, renderer:SceneRenderer) {
 
     world.add_unique(Controller::default());
     world.add_unique(InputQueue::new());
@@ -34,8 +34,6 @@ pub fn init_world(dom: Dom, media: Media, renderer:SceneRenderer) -> World {
     register_workloads(&world);
 
     init_scenegraph::<Vec3, Quat, Mat4, f32>(&world);
-
-    world
 }
 
 pub const RENDER:&str = "RENDER";

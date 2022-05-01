@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::{renderer::{picker::Interactable, RendererView}, media::MediaView, evaluate::Evaluate, pieces::PieceState, dom::DomView};
+use crate::{renderer::{picker::Interactable, RendererView}, media::MediaView, evaluate::Evaluate, pieces::PieceState, dom::{DomView, ui::state::ButtonState}};
 use nalgebra_glm::Vec3;
 use shipyard::*;
 use shipyard_scenegraph::prelude::*;
@@ -31,7 +31,8 @@ pub fn reset_sys(
             entities.add_component(entity, &mut tweens, tween_pos);
         }
 
-        dom.with_btn(|btn| btn.set_text_content(Some("reset")));
+        dom.ui.button.set_neq(Some(ButtonState::Reset));
+
         reset.0 = false;
     }
 }
