@@ -11,31 +11,31 @@ crate-type = ["cdylib"]
 #SOON: shipyard = { version = "^0.5", features = ["non_send", "non_sync"], default-features = false }
 shipyard = { git = "https://github.com/leudz/shipyard", default-features = false, features = ["proc","thread_local" ] }
 shipyard_scenegraph = { git = "https://github.com/dakom/shipyard-scenegraph", default-features = false, features = ["nalgebra_glm_math"]}
-nalgebra-glm = "0.16.0"
-nalgebra = "0.30.1"
-wasm-bindgen = "0.2.79"
-js-sys = "0.3.56"
-wasm-bindgen-futures= "0.4.29"
-gloo-events = "0.1.1"
-awsm_web = { version = "0.32.3", features = ["tick", "webgl", "loaders", "audio", "dom", "serde_iso"], default-features = false }
-serde = "1.0.136"
-serde_json = "1.0.79"
+nalgebra-glm = "0.17.0"
+nalgebra = "0.31.0"
+wasm-bindgen = "0.2.81"
+js-sys = "0.3.58"
+wasm-bindgen-futures= "0.4.31"
+gloo-events = "0.1.2"
+awsm_web = { version = "0.33.0", features = ["tick", "webgl", "loaders", "audio", "dom", "serde_iso"], default-features = false }
+serde = "1.0.137"
+serde_json = "1.0.81"
 wasm-logger = { version = "0.2.0", optional = true }
 cfg-if = "1.0.0"
-log = "0.4.14"
+log = "0.4.17"
 lazy_static = "1.4.0"
 console_error_panic_hook = { version = "0.1.7", optional = true }
 derive_deref = "1.1.1"
 futures = "0.3.21"
-dominator = "0.5.24"
-futures-signals = "0.3.25"
-once_cell = "1.10.0"
+dominator = "0.5.26"
+futures-signals = "0.3.28"
+once_cell = "1.12.0"
 
 # [patch.crates-io]
 # shipyard = { version = "^0.3", features = ["proc", "non_send", "non_sync"], default-features = false}
 
 [dependencies.web-sys]
-version = "0.3.56"
+version = "0.3.58"
 features = [
     "console",
     "MouseEvent",

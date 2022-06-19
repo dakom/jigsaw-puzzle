@@ -1,3 +1,4 @@
+use crate::controller::queue::{InputQueueViewMut, Input};
 use crate::dom::DomView;
 use crate::dom::ui::state::{HeaderState, ButtonState};
 use crate::renderer::RendererViewMut;
@@ -95,6 +96,10 @@ pub async fn setup() -> Result<Rc<World>, JsValue> {
 
     crate::pieces::create(&world, stage_width as f32, stage_height as f32);
 
+    // force the reset - temp
+    world.run(|mut queue: InputQueueViewMut| {
+        queue.insert_replace(Input::ResetButton);
+    });
     // these just run forever
     std::mem::forget(Box::new(tick));
     std::mem::forget(Box::new(InputListeners::new(world.clone())));

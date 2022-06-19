@@ -20,7 +20,7 @@ use crate::evaluate::Evaluate;
 
 pub type ControllerViewMut<'a> = UniqueViewMut<'a, Controller>;
 
-#[derive(Component, PartialEq, Default)]
+#[derive(Component, Unique, PartialEq, Default)]
 pub struct Controller {
     pub drag: Option<DragController>,
     pub camera: CameraController,

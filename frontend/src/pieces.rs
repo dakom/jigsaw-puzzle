@@ -12,7 +12,7 @@ use awsm_web::{webgl::Id, dom::StyleExt};
 use web_sys::HtmlImageElement;
 use crate::prelude::*;
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Unique, Deref, DerefMut)]
 pub struct PiecesOrder (pub Vec<EntityId>);
 
 #[derive(Component, PartialEq)]

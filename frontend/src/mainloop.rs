@@ -3,7 +3,7 @@ use crate::world::{RENDER, CONTROLLER, CLEANUP, GAMEPLAY};
 use crate::prelude::*;
 
 pub type UpdateTickViewMut<'a> = UniqueViewMut<'a, UpdateTick>;
-#[derive(Component, Default)]
+#[derive(Component, Unique, Default)]
 pub struct UpdateTick {
     pub delta:f64,
 }

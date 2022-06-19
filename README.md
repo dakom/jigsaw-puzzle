@@ -12,8 +12,11 @@ Some other stuff under the hood ([awsm-web](https://github.com/dakom/awsm-web), 
 
 # Status
 
-Still more to do:
+Mostly works. still more to do:
 
 * Sound effects
-* Multiplayer
-* Toggle outline mode (maybe) 
+* Toggle hint layer
+* outlines ?
+* Multiplayer?
+
+and one quirky layering bug that just will not go away :P

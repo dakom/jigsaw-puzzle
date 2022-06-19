@@ -37,7 +37,7 @@ use crate::prelude::*;
 pub type RendererView<'a> = NonSendSync<UniqueView<'a, SceneRenderer>>;
 pub type RendererViewMut<'a> = NonSendSync<UniqueViewMut<'a, SceneRenderer>>;
 
-#[derive(Component)]
+#[derive(Component, Unique)]
 pub struct SceneRenderer {
     renderer: WebGl1Renderer,
     pub programs: Programs,
@@ -299,6 +299,7 @@ impl SceneRenderer {
 
     fn draw_sprite_sheet(&mut self,
         sprite_sheet_texture_id: Id,
+        media: &Media,
         camera: &UniqueView<Camera>,
         data_buffers: &DataBuffers,
         n_pieces: u32,
@@ -340,6 +341,9 @@ impl SceneRenderer {
             Pass::PiecesBg => {
                 self.upload_uniform_fval_name("u_alpha", 0.1);
             },
+            Pass::PiecesOutline => {
+                self.upload_uniform_fvals_2_name("u_size", (media.puzzle_info.atlas_width as f32, media.puzzle_info.atlas_height as f32));
+            },
             _ => {}
         };
 
@@ -378,18 +382,21 @@ impl SceneRenderer {
 
 pub fn render_sys(
     mut renderer: RendererViewMut, 
+    media: MediaView,
     sprite_sheet_texture_id: UniqueView<SpriteSheetTextureId>,
     data_buffers: UniqueView<DataBuffers>,
     interactables: View<Interactable>,
     camera: UniqueView<Camera>, 
 ) {
+    //log::info!("{} {}", media.puzzle_info.atlas_width, media.puzzle_info.atlas_height);
+
     let n_pieces = interactables.iter().count() as u32;
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &media, &camera, &data_buffers, n_pieces, Pass::Picker).unwrap_ext();
     // clears the main drawing buffer - picker is cleared when its framebuffer is set
     renderer.draw_clear(0.3, 0.3, 0.3, 1.0);
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesBg).unwrap_ext();
-    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesActive).unwrap_ext();
+    //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &media, &camera, &data_buffers, n_pieces, Pass::PiecesOutline).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &media, &camera, &data_buffers, n_pieces, Pass::PiecesBg).unwrap_ext();
+    renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &media, &camera, &data_buffers, n_pieces, Pass::PiecesActive).unwrap_ext();
     renderer.draw_border(&camera, &data_buffers).unwrap_ext();
-    //renderer.draw_sprite_sheet(sprite_sheet_texture_id.0, &camera, &data_buffers, n_pieces, Pass::PiecesOutline).unwrap_ext();
 }
 

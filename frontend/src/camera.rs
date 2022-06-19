@@ -1,7 +1,7 @@
 use nalgebra_glm::Mat4;
 use shipyard::*;
 
-#[derive(Component)]
+#[derive(Component, Unique)]
 pub struct Camera {
     pub zoom: f64,
     pub x: f64,

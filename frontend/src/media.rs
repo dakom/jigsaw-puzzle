@@ -9,7 +9,7 @@ use crate::prelude::*;
 pub type MediaViewMut<'a> = NonSendSync<UniqueViewMut<'a, Media>>;
 pub type MediaView<'a> = NonSendSync<UniqueView<'a, Media>>;
 
-#[derive(Component)]
+#[derive(Component, Unique)]
 pub struct Media {
     pub picker_vertex_shader: String,
     pub picker_fragment_shader: String,

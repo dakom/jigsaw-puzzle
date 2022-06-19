@@ -21,7 +21,7 @@ use canvas::Canvas;
 pub type DomViewMut<'a> = NonSendSync<UniqueViewMut<'a, DomState>>;
 pub type DomView<'a> = NonSendSync<UniqueView<'a, DomState>>;
 
-#[derive(Component)]
+#[derive(Component, Unique)]
 pub struct DomState {
     pub ui: Rc<Ui>,
     pub window: Window,

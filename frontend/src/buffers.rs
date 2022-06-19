@@ -7,7 +7,7 @@ use shipyard::*;
 use shipyard_scenegraph::prelude::*;
 use awsm_web::prelude::*;
 use crate::{media::{MediaPiece, PuzzleInfo, Media, MediaView}, renderer::{SceneRenderer, picker::{InteractableLookup, Interactable}, RendererViewMut}, camera::Z_DEPTH};
-#[derive(Component, Default)]
+#[derive(Component, Unique, Default)]
 pub struct DataBuffers {
     pub has_set_bg: bool,
     pub piece_active_vertices: Vec<f32>,

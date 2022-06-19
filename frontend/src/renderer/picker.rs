@@ -23,7 +23,7 @@ use std::collections::HashMap;
 pub type InteractableLookupView<'a> = UniqueView<'a, InteractableLookup>;
 pub type InteractableLookupViewMut<'a> = UniqueViewMut<'a, InteractableLookup>;
 
-#[derive(Component, Default)]
+#[derive(Component, Unique, Default)]
 pub struct InteractableLookup{
     pub entity_to_index: HashMap<EntityId, u32>,
     pub index_to_entity: HashMap<u32, EntityId>,

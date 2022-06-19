@@ -6,7 +6,7 @@ use shipyard_scenegraph::prelude::*;
 use crate::animation::TweenPos;
 use derive_deref::{Deref, DerefMut};
 
-#[derive(Component, Deref, DerefMut, Default)]
+#[derive(Component, Unique, Deref, DerefMut, Default)]
 pub struct Reset(pub bool);
 
 pub fn reset_sys(
